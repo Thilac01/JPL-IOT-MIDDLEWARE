@@ -20,10 +20,13 @@ class DatabaseManager:
                     ssh_username=settings.SSH_USER,
                     ssh_password=settings.SSH_PASSWORD,
                     remote_bind_address=('127.0.0.1', 3306),
-                    local_bind_address=('127.0.0.1', settings.REPLICA_PORT)
+                    local_bind_address=('127.0.0.1', 0) # Use random free port
                 )
                 self.tunnel.start()
+                settings.REPLICA_PORT = self.tunnel.local_bind_port
                 logger.info(f"SSH Tunnel active on 127.0.0.1:{settings.REPLICA_PORT}")
+                import time
+                time.sleep(1) # Small delay for stability
 
             self.pool = await aiomysql.create_pool(
                 host=settings.REPLICA_HOST,
@@ -31,7 +34,9 @@ class DatabaseManager:
                 user=settings.REPLICA_USER,
                 password=settings.REPLICA_PASSWORD,
                 db=settings.REPLICA_DB,
-                autocommit=True
+                autocommit=True,
+                charset='utf8mb4',
+                connect_timeout=20
             )
             logger.info("Successfully connected to MySQL Pool")
         except Exception as e:

@@ -249,7 +249,37 @@
                     </div>
                 </section>
                 <section id="alerts" class="tab-pane"><div class="data-panel"><div class="panel-title">System Alerts</div><div id="alerts-content" style="padding:2rem; color:#666;">No unacknowledged alerts found.</div></div></section>
-                <section id="audit" class="tab-pane"><div class="data-panel"><div class="panel-title">Audit Log</div><div id="audit-content" style="padding:2rem; color:#666;">Accessing secure audit storage...</div></div></section>
+                                <section id="audit" class="tab-pane">
+                    <div class="data-panel">
+                        <div class="table-header-controls" style="justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-size: 1.1rem; font-weight: 700; color: var(--primary);"><i class="fas fa-history" style="color: var(--secondary); margin-right: 10px;"></i> SYSTEM AUDIT LOG</span>
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">Comprehensive record of all database transactions and user actions within the Koha ecosystem.</div>
+                            </div>
+                            <div style="display:flex; gap: 10px;">
+                                <input type="text" id="audit-search" class="control-input" placeholder="Search logs..." oninput="filterAuditLogs()">
+                                <button class="btn-enterprise" onclick="fetchAuditLogs()"><i class="fas fa-sync"></i> REFRESH</button>
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table id="audit-table">
+                                <thead>
+                                    <tr>
+                                        <th>TIMESTAMP</th>
+                                        <th>USER</th>
+                                        <th>TYPE</th>
+                                        <th>ACTION</th>
+                                        <th>MODULE</th>
+                                        <th>OBJECT ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="audit-tbody">
+                                    <tr class="loading"><td colspan="6" style="text-align: center; padding: 2rem;">Accessing secure audit storage...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
 
             </main>
         </div>

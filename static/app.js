@@ -237,10 +237,104 @@ async function fetchStats() {
         }
 
         // Update Audit Log Content
-        const auditContent = document.getElementById('audit-content');
-        auditContent.innerHTML = `Audit storage connected successfully. Monitoring <b>${data.active_loans || 0} active objects</b> in pipeline. System status: <b>${data.system_status || 'Online'}</b>`;
+        fetchAuditLogs();
 
     } catch (e) { console.error(e); }
+}
+
+let currentAuditData = [];
+
+async function fetchAuditLogs() {
+    const tbody = document.getElementById('audit-tbody');
+    try {
+        const res = await fetch('/api/audit-logs');
+        const data = await res.json();
+        currentAuditData = data;
+        renderAuditLogs(data);
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem; color: var(--error);">Security protocol restricted access or connection timeout.</td></tr>';
+    }
+}
+
+function renderAuditLogs(data) {
+    const tbody = document.getElementById('audit-tbody');
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem;">No audit records found in secure storage.</td></tr>';
+        return;
+    }
+
+    const moduleIcons = {
+        'MEMBERS': 'fa-users',
+        'CIRCULATION': 'fa-sync-alt',
+        'SYSTEM': 'fa-cogs',
+        'RESERVES': 'fa-bookmark',
+        'PREFERENCES': 'fa-sliders-h',
+        'CATALOGUE': 'fa-book'
+    };
+
+    tbody.innerHTML = data.map(log => {
+        const typeClass = `badge-${log.type.toLowerCase()}`;
+        const icon = moduleIcons[log.module] || 'fa-info-circle';
+        
+        // Pretty format the action text
+        let actionDisplay = log.action;
+        if (actionDisplay.length > 60) actionDisplay = actionDisplay.substring(0, 57) + '...';
+        
+        return `
+            <tr>
+                <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #888;">
+                    <div style="display:flex; flex-direction:column;">
+                        <span>${new Date(log.timestamp).toLocaleDateString()}</span>
+                        <span style="font-weight:700; color:#555;">${new Date(log.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                </td>
+                <td>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg, #eef2f8 0%, #d1d9e6 100%); display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:700; color:var(--primary); border: 1px solid rgba(0,0,0,0.05);">
+                            ${log.user_name ? log.user_name.charAt(0) : 'U'}
+                        </div>
+                        <div>
+                            <div style="font-weight:700; color:var(--primary); font-size:0.85rem;">${log.user_name || 'System'}</div>
+                            <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">${log.user_type || 'INTERNAL'}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="badge-action ${typeClass}" style="width: 70px; text-align:center;">${log.type}</span>
+                    </div>
+                </td>
+                <td>
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                        <div style="font-weight: 600; color: #445; font-size:0.85rem;">${actionDisplay}</div>
+                        <div style="font-size:0.7rem; color: #99a;">Performed on secure shard ${log.module || 'CORE'}</div>
+                    </div>
+                </td>
+                <td>
+                    <div style="display:flex; align-items:center; gap:6px; color: #666; font-size:0.75rem;">
+                        <i class="fas ${icon}" style="width:14px; color:var(--accent);"></i>
+                        <span style="font-weight:600;">${log.module}</span>
+                    </div>
+                </td>
+                <td>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-weight:700; background:#f0f2f5; padding: 4px 8px; border-radius:4px; font-size:0.75rem; color:var(--primary); border: 1px solid #e0e4e9;">
+                        ${log.object_id || '—'}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function filterAuditLogs() {
+    const term = document.getElementById('audit-search').value.toLowerCase();
+    const filtered = currentAuditData.filter(log => 
+        String(log.user_name).toLowerCase().includes(term) ||
+        String(log.action).toLowerCase().includes(term) ||
+        String(log.module).toLowerCase().includes(term) ||
+        String(log.object_id).toLowerCase().includes(term)
+    );
+    renderAuditLogs(filtered);
 }
 
 async function fetchLoans() {
@@ -302,8 +396,8 @@ async function fetchReturns() {
 // Table Discovery Logic
 async function fetchTableList() {
     const selector = document.getElementById('table-selector');
-    const fallbackTables = ["biblio", "items", "issues", "borrowers", "branches", "itemtypes"];
-    
+    if (!selector) return;
+
     try {
         const res = await fetch('/api/tables');
         if (!res.ok) throw new Error("API Unreachable");
@@ -311,9 +405,8 @@ async function fetchTableList() {
         const tables = await res.json();
         populateSelector(selector, tables);
     } catch (e) { 
-        console.warn("Using offline discovery fallback:", e);
-        populateSelector(selector, fallbackTables);
-        addLogEntry('SYSTEM', 'Operating in localized cache mode (DB Offline)', 'warning');
+        console.warn("Table discovery failed", e);
+        addLogEntry('SYSTEM', 'Database connection unavailable for discovery', 'error');
     }
 }
 

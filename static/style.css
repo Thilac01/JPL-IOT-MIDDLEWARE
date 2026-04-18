@@ -367,3 +367,29 @@ tr:hover { background: #f8f9fa; }
 
 .gate-node-header { background: #17a2b8 !important; }
 
+/* Audit Log Specifics */
+.badge-action {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: white;
+}
+.badge-insert { background: var(--success); }
+.badge-update { background: var(--accent); }
+.badge-delete { background: var(--error); }
+.badge-access { background: var(--secondary); }
+
+.control-input {
+    padding: 0.5rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    outline: none;
+    background: #fdfdfd;
+    transition: all 0.2s;
+}
+
+.control-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1); }
+

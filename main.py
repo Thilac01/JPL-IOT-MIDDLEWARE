@@ -99,10 +99,8 @@ def is_db_connected():
 @app.get("/api/active-loans")
 async def get_active_loans():
     if not is_db_connected():
-        return [
-            {"issue_id": 1024, "barcode": "B001001", "title": "The Art of Computer Programming", "firstname": "John", "surname": "Doe", "issuedate": "2024-04-10T10:00:00", "date_due": "2024-04-24T10:00:00"},
-            {"issue_id": 1025, "barcode": "B001002", "title": "Clean Code", "firstname": "Jane", "surname": "Smith", "issuedate": "2024-04-12T14:30:00", "date_due": "2024-04-26T14:30:00"}
-        ]
+        return []
+        
         
     query = """
         SELECT i.issue_id, it.barcode, b.title, p.firstname, p.surname, i.issuedate, i.date_due
@@ -121,7 +119,7 @@ async def get_active_loans():
 @app.get("/api/recent-returns")
 async def get_recent_returns():
     if not is_db_connected():
-        return [{"issue_id": 998, "title": "Introduction to Algorithms", "firstname": "Michael", "surname": "Brown", "returndate": "2024-04-17T08:20:00"}]
+        return []
 
     query = """
         SELECT oi.issue_id, b.title, p.firstname, p.surname, oi.returndate
@@ -136,10 +134,40 @@ async def get_recent_returns():
     except Exception:
         return []
 
+@app.get("/api/audit-logs")
+async def get_audit_logs():
+    if not is_db_connected():
+        return []
+
+    # Real query for Koha's action_logs table
+    query = """
+        SELECT al.timestamp, 
+               CONCAT(b.firstname, ' ', b.surname) as user_name,
+               CASE 
+                 WHEN b.categorycode = 'STAFF' THEN 'STAFF'
+                 WHEN b.categorycode = 'S' THEN 'SUPER-USER'
+                 ELSE 'STAFF' 
+               END as user_type,
+               al.action as type,
+               al.info as action,
+               al.module, al.object as object_id
+        FROM action_logs al
+        LEFT JOIN borrowers b ON al.user = b.borrowernumber
+        ORDER BY al.timestamp DESC LIMIT 50
+    """
+    try:
+        results = await db.fetch_all(query)
+        if not results:
+            return [{"timestamp": "N/A", "user_name": "No logs", "user_type": "N/A", "type": "INFO", "action": "No records found", "module": "SYSTEM", "object_id": "—"}]
+        return results
+    except Exception as e:
+        logger.error(f"Audit Log Error: {e}")
+        return []
+
 @app.get("/api/stats")
 async def get_stats():
     if not is_db_connected():
-        return {"active_loans": 142, "overdue": 12, "system_status": "Simulated"}
+        return {"active_loans": 0, "overdue": 0, "system_status": "Offline"}
     try:
         loans_count = await db.fetch_one("SELECT COUNT(*) as count FROM issues")
         overdue_count = await db.fetch_one("SELECT COUNT(*) as count FROM issues WHERE date_due < NOW()")
@@ -148,17 +176,17 @@ async def get_stats():
             "overdue": overdue_count['count'] if overdue_count else 0,
             "system_status": "Online"
         }
-    except Exception:
-        return {"active_loans": 142, "overdue": 12, "system_status": "Sync-Error (Demo)"}
+    except Exception as e:
+        logger.error(f"Stats Error: {e}")
+        return {"active_loans": 0, "overdue": 0, "system_status": "Sync-Error"}
 
 # --- Data Discovery Endpoints ---
 
 @app.get("/api/tables")
 async def get_tables_list():
     """Retrieve list of all tables in the read replica with robust key detection"""
-    if not db.pool:
-        # Provide realistic Koha table mock list so UI doesn't look empty when offline
-        return ["biblio", "items", "issues", "borrowers", "branches", "itemtypes", "old_issues", "reserves"]
+    if not is_db_connected():
+        return []
         
     query = "SHOW TABLES"
     try:
@@ -187,28 +215,7 @@ async def get_table_data(table_name: str):
     query = f"SELECT * FROM {table_name} LIMIT 100"
     
     if not is_db_connected():
-        # Provide offline industrial mockup data depending on the table
-        mock_data = []
-        if table_name == "borrowers":
-            mock_data = [
-                {"borrowernumber": 1, "cardnumber": "LIB-001", "firstname": "Admin", "surname": "System", "categorycode": "STAFF", "branchcode": "MAIN"},
-                {"borrowernumber": 2, "cardnumber": "LIB-002", "firstname": "John", "surname": "Doe", "categorycode": "STUD", "branchcode": "ENG"},
-                {"borrowernumber": 3, "cardnumber": "LIB-003", "firstname": "Jane", "surname": "Smith", "categorycode": "PROF", "branchcode": "SCI"}
-            ]
-        elif table_name == "issues":
-            mock_data = [
-                {"issue_id": 1024, "borrowernumber": 2, "itemnumber": 5001, "issuedate": "2024-04-10T10:00:00", "date_due": "2024-04-24T10:00:00"},
-                {"issue_id": 1025, "borrowernumber": 3, "itemnumber": 5002, "issuedate": "2024-04-12T14:30:00", "date_due": "2024-04-26T14:30:00"}
-            ]
-        elif table_name == "biblio":
-            mock_data = [
-                {"biblionumber": 100, "author": "Knuth, Donald", "title": "The Art of Computer Programming", "datecreated": "2023-01-15"},
-                {"biblionumber": 101, "author": "Martin, Robert C.", "title": "Clean Code", "datecreated": "2023-02-20"}
-            ]
-        else:
-            # Generic mock data
-            mock_data = [{"id": i, "name": f"Mock_{table_name}_{i}", "status": "ACTIVE", "created_at": "2024-04-18T00:00:00"} for i in range(1, 6)]
-        return mock_data
+        return []
 
     try:
         return await db.fetch_all(query)
@@ -254,11 +261,7 @@ async def scan_network():
         return {"status": "success", "nodes": nodes}
     except Exception as e:
         logger.error(f"ARP Scan failed: {e}")
-        # Fallback simulated nodes if scanner restricted
-        return {"status": "success", "nodes": [
-            {"ip": "192.168.1.101", "mac": "b8:27:eb:xx:xx:xx", "type": "Raspberry Pi Device", "is_pi": True},
-            {"ip": "10.0.0.42", "mac": "dc:a6:32:xx:xx:xx", "type": "Twingate Pi Node", "is_pi": True}
-        ]}
+        return {"status": "error", "nodes": []}
 
 class DeployRequest(BaseModel):
     ip: str
