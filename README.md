@@ -4,3 +4,4 @@
 # JPL-IOT-MIDDLEWARE<img width="1906" height="862" alt="IOT MAPS" src="https://github.com/user-attachments/assets/5ca5c37a-e2f6-4897-831e-802bf6f105bf" />
 <img width="1913" height="872" alt="WHITELIST" src="https://github.com/user-attachments/assets/59352ce6-ae5d-41ee-a177-35e28a113d46" />
 <img width="1913" height="866" alt="LIVE TABLES" src="https://github.com/user-attachments/assets/55129419-d474-4843-b128-801387c25b31" />
+<img width="1915" height="859" alt="image" src="https://github.com/user-attachments/assets/58b6150c-f02c-41a3-a87f-9704753c40e6" />
