@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-dotenv
+aiomysql
+mysql-replication
+httpx
+pydantic
+pydantic-settings
+python-multipart
+mysql-connector-python

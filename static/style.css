@@ -1,0 +1,369 @@
+:root {
+    /* WSO2 Enterprise Light Theme */
+    --primary: #1e2129; /* Dark Indigo/Gray */
+    --secondary: #ff5000; /* Enterprise Orange */
+    --accent: #2196f3; /* Corporate Blue */
+    --bg-main: #f5f6f8;
+    --sidebar-bg: #ffffff;
+    --header-bg: #1e2129;
+    --card-bg: #ffffff;
+    --border: #d5d9e0;
+    --text-main: #333333;
+    --text-muted: #666666;
+    --success: #28a745;
+    --error: #dc3545;
+    --warning: #ffc107;
+    --panel-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Open Sans', 'Roboto', sans-serif;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    overflow: hidden;
+    height: 100vh;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* WSO2 Header */
+.enterprise-header {
+    height: 50px;
+    background: var(--header-bg);
+    display: flex;
+    align-items: center;
+    padding: 0 1.5rem;
+    color: white;
+    justify-content: space-between;
+    z-index: 1000;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.brand img {
+    height: 24px;
+}
+
+.brand h1 {
+    font-size: 0.9rem;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.brand b { font-weight: 700; color: var(--secondary); }
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.status-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.online { background: var(--success); }
+.status-badge.offline { background: var(--error); }
+
+/* Layout Grid */
+.layout-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 240px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-menu {
+    padding: 1rem 0;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+.nav-item:hover {
+    background: #f0f2f5;
+    color: var(--primary);
+}
+
+.nav-item.active {
+    background: #eef2f8;
+    color: var(--accent);
+    border-left-color: var(--accent);
+}
+
+.nav-item i {
+    width: 20px;
+    font-size: 1rem;
+}
+
+/* Content Area */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 1.5rem;
+}
+
+.breadcrumb {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.breadcrumb b { color: var(--text-main); font-weight: 600; }
+
+/* Dashboard Cards */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.kpi-card {
+    background: white;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.kpi-card.warning { border-top-color: var(--warning); }
+.kpi-card.danger { border-top-color: var(--error); }
+.kpi-card.success { border-top-color: var(--success); }
+
+.kpi-data h4 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.kpi-data span {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.kpi-icon {
+    font-size: 1.5rem;
+    opacity: 0.2;
+}
+
+/* Data Tables */
+.data-panel {
+    background: white;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    min-width: 0;
+    min-height: 0;
+}
+
+.panel-title {
+    padding: 0.75rem 1.25rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.table-wrapper {
+    flex: 1;
+    overflow: auto;
+    width: 100%;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    text-align: left;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    background: #f0f2f5;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+}
+
+td {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.8rem;
+    border-bottom: 1px solid #f0f2f5;
+    white-space: nowrap;
+}
+
+tr:hover { background: #f8f9fa; }
+
+/* CDC Stream Viewer (Enhanced Terminal) */
+.stream-panel {
+    margin-top: 1.5rem;
+    background: #1e2129;
+    color: #e0e0e0;
+    height: 250px;
+}
+
+.stream-body {
+    padding: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    overflow-y: auto;
+    height: calc(100% - 35px);
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+.log-line {
+    border-bottom: 1px solid #2d3139;
+    padding: 4px 0;
+    display: flex;
+    gap: 1rem;
+}
+
+.log-time { color: #888; }
+.log-tag { font-weight: 700; color: var(--secondary); min-width: 80px; }
+
+/* Table Control Bar Overlay */
+.table-header-controls {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+}
+
+.control-group select, 
+.control-group input {
+    padding: 0.6rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    outline: none;
+    background: #f8fafc;
+    min-width: 320px; /* Increased for long Koha table names */
+    color: var(--text-primary);
+    transition: all 0.2s;
+}
+
+.btn-enterprise {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 0.4rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-enterprise:hover { opacity: 0.9; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+.tab-pane { display: none; }
+.tab-pane.active { display: flex; flex-direction: column; flex: 1; animation: fadeIn 0.3s; min-height: 0; min-width: 0; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #b8c0c9; border-radius: 4px; border: 2px solid #f1f1f1; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* IoT Map Blender Nodes */
+.node-box {
+    position: absolute;
+    width: 220px;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border: 1px solid #d1d5db;
+    z-index: 2;
+    transition: transform 0.2s;
+}
+
+.node-box:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+
+.node-header {
+    background: #343a40;
+    color: white;
+    padding: 8px 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 5px 5px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.node-body {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.node-port {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    z-index: 3;
+}
+
+.gate-node-header { background: #17a2b8 !important; }
+

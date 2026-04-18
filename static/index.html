@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Security Monitor | Library IoT</title>
+    <link rel="stylesheet" href="style.css?v=3">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- WSO2 Header -->
+        <header class="enterprise-header">
+            <div class="brand">
+                <i class="fas fa-microchip" style="font-size: 1.2rem; color: var(--secondary)"></i>
+                <h1>JPL <b>IOT</b> MIDDLEWARE</h1>
+            </div>
+            <div class="header-actions">
+                <div id="connection-status" class="status-badge offline">DISCONNECTED</div>
+                <div style="font-size: 0.8rem; opacity: 0.8;" id="clock">00:00:00</div>
+                <div class="user-info" style="font-size: 0.8rem; font-weight: 600;">
+                    <i class="fas fa-user-circle"></i> admin
+                </div>
+            </div>
+        </header>
+
+        <div class="layout-body">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <nav class="nav-menu">
+                    <a href="#" class="nav-item active" data-tab="dashboard">
+                        <i class="fas fa-tachometer-alt"></i><span>DASHBOARD</span>
+                    </a>
+                    <a href="#" class="nav-item" data-tab="live-tables">
+                        <i class="fas fa-database"></i><span>LIVE TABLES</span>
+                    </a>
+                    <a href="#" class="nav-item" data-tab="whitelist">
+                        <i class="fas fa-shield-alt"></i><span>WHITELIST</span>
+                    </a>
+                    <a href="#" class="nav-item" data-tab="iot-maps">
+                        <i class="fas fa-map-marked-alt"></i><span>IOT MAPS</span>
+                    </a>
+                    <a href="#" class="nav-item" data-tab="alerts">
+                        <i class="fas fa-exclamation-circle"></i><span>ALERTS</span>
+                    </a>
+                    <a href="#" class="nav-item" data-tab="audit">
+                        <i class="fas fa-clipboard-list"></i><span>AUDIT LOG</span>
+                    </a>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <div class="breadcrumb">
+                    <i class="fas fa-home"></i> / <span id="breadcrumb-path"><b>DASHBOARD</b></span>
+                </div>
+
+                <!-- Dashboard Tab -->
+                <section id="dashboard" class="tab-pane active">
+                    <div class="kpi-grid">
+                        <div class="kpi-card danger">
+                            <div class="kpi-data">
+                                <h4>Unacknowledged Alerts</h4>
+                                <span id="stat-alerts">0</span>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-bell"></i></div>
+                        </div>
+                        <div class="kpi-card success">
+                            <div class="kpi-data">
+                                <h4>Active Loans</h4>
+                                <span id="stat-loans">--</span>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-book-reader"></i></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-data">
+                                <h4>Sync Frequency</h4>
+                                <span id="stat-events">0/min</span>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-sync"></i></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-data">
+                                <h4>Session Events</h4>
+                                <span id="total-events">0</span>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-stream"></i></div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 1.5rem; flex: 1; min-height: 0; min-width: 0;">
+                        <div class="data-panel" style="flex: 1.5;">
+                            <div class="panel-title">ACTIVE LOANS PIPELINE</div>
+                            <div class="table-wrapper">
+                                <table id="active-loans-table">
+                                    <thead><tr><th>BORROWER</th><th>ASSET TITLE</th><th>ISSUED</th><th>DUE</th></tr></thead>
+                                    <tbody><tr class="loading"><td colspan="4">Initializing stream...</td></tr></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="data-panel" style="flex: 1;">
+                            <div class="panel-title">RECENT RETURNS</div>
+                            <div class="table-wrapper">
+                                <table id="recent-returns-table">
+                                    <thead><tr><th>ASSET</th><th>BORROWER</th><th>TIME</th></tr></thead>
+                                    <tbody><tr class="loading"><td colspan="3">Waiting for data...</td></tr></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="data-panel stream-panel">
+                        <div class="panel-title" style="background: #15181f; color: #888;">REAL-TIME CDC LOG ENGINE</div>
+                        <div class="stream-body" id="event-stream">
+                            <div class="log-line"><span class="log-time"></span><span class="log-tag">SYSTEM</span><span class="log-msg">Middleware kernel ready.</span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Live Tables Tab -->
+                <section id="live-tables" class="tab-pane">
+                    <div class="data-panel">
+                        <div class="table-header-controls">
+                            <div style="display:flex; flex-direction:column; gap:5px;">
+                                <span style="font-size:0.7rem; font-weight:700; color:var(--text-muted)">TARGET REPLICA TABLE</span>
+                                <select id="table-selector" class="control-input" style="min-width: 250px;" onchange="onTableChange()">
+                                    <option value="">Select a table...</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:5px;">
+                                <span style="font-size:0.7rem; font-weight:700; color:var(--text-muted)">FULL-TEXT FILTER</span>
+                                <input type="text" id="table-search" class="control-input" placeholder="Filter rows..." oninput="filterCurrentTable()">
+                            </div>
+                            <div style="display:flex; align-items:flex-end;">
+                                <button class="btn-enterprise" onclick="refreshTableData()"><i class="fas fa-sync"></i> SYNC NOW</button>
+                            </div>
+                        </div>
+                        <div class="panel-title" id="current-table-name">DATA EXPLORER</div>
+                        <div class="table-wrapper">
+                            <table id="dynamic-data-table">
+                                <thead id="dynamic-thead"></thead>
+                                <tbody id="dynamic-tbody">
+                                    <tr><td colspan="5" style="text-align:center; padding: 3rem; color: #999;">Select a database table to start analysis.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Other Tabs (Empty States / Functionality) -->
+                <section id="whitelist" class="tab-pane">
+                    <div class="data-panel">
+                        <div class="table-header-controls" style="justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-size: 1.1rem; font-weight: 700; color: var(--primary);"><i class="fas fa-shield-alt" style="color: var(--success); margin-right: 10px;"></i> SECURITY GATE WHITELIST</span>
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">Live transmission channel to RFID gate logic. Assets listed below are cleared to exit safely.</div>
+                            </div>
+                            <div class="status-badge online" style="font-size: 0.8rem; padding: 5px 10px; border-radius: 4px; box-shadow: 0 0 10px rgba(40,167,69,0.3);">
+                                <i class="fas fa-satellite-dish"></i> BROADCASTING SYNC
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table id="whitelist-table">
+                                <thead>
+                                    <tr>
+                                        <th>BARCODE ID</th>
+                                        <th>ASSET TITLE</th>
+                                        <th>LOANED TO</th>
+                                        <th>DUE DATE</th>
+                                        <th>ISSUED ON</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="loading"><td colspan="5" style="text-align: center; padding: 2rem;">Connecting to whitelist engine...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                <!-- IoT Node Map & Deployment Tab -->
+                <section id="iot-maps" class="tab-pane">
+                    <div style="display: flex; gap: 1.5rem; flex: 1; min-height: 0; min-width: 0;">
+                        <!-- Left: Blender-like Node Canvas -->
+                        <div class="data-panel" style="flex: 2; position: relative;">
+                            <div class="table-header-controls" style="justify-content: space-between;">
+                                <div>
+                                    <span style="font-size: 1.1rem; font-weight: 700; color: var(--primary);"><i class="fas fa-network-wired" style="color: var(--accent); margin-right: 10px;"></i> IOT NODE TOPOLOGY</span>
+                                </div>
+                                <button class="btn-enterprise" onclick="fetchIotNodes()"><i class="fas fa-sync"></i> Refresh Map</button>
+                            </div>
+                            <!-- Node Graph Workspace -->
+                            <div class="node-canvas" id="node-canvas" style="flex: 1; background: #eef1f6; position: relative; overflow: hidden; background-image: radial-gradient(#d1d5db 1px, transparent 1px); background-size: 20px 20px; box-shadow: inset 0 0 20px rgba(0,0,0,0.05);">
+                                
+                                <!-- Connection Lines (SVG) -->
+                                <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1;" id="node-lines"></svg>
+
+                                <!-- Core Nodes -->
+                                <div class="node-box" id="node-koha" style="top: 20%; left: 10%;">
+                                    <div class="node-header"><i class="fas fa-database"></i> Koha Core Database</div>
+                                    <div class="node-body">
+                                        <div><span style="color:#666;font-size:0.7rem;">IP:</span> 137.184.15.52</div>
+                                        <div><span style="color:#666;font-size:0.7rem;">Status:</span> <span style="color:var(--success);font-weight:bold;">CONNECTED</span></div>
+                                    </div>
+                                    <div class="node-port out-port" style="right: -6px; top: 50%;"></div>
+                                </div>
+
+                                <div class="node-box" id="node-mid" style="top: 40%; left: 40%;">
+                                    <div class="node-port in-port" style="left: -6px; top: 25%;"></div>
+                                    <div class="node-header" style="background: var(--accent);"><i class="fas fa-microchip"></i> JPL Middleware</div>
+                                    <div class="node-body">
+                                        <div><span style="color:#666;font-size:0.7rem;">Engine:</span> CDC Pipeline</div>
+                                        <div><span style="color:#666;font-size:0.7rem;">Port:</span> 8000</div>
+                                    </div>
+                                    <div class="node-port out-port" style="right: -6px; top: 75%;"></div>
+                                </div>
+
+                                <!-- Dynamic Gate Nodes will be injected here by JS -->
+                                <div id="dynamic-gates-container"></div>
+
+                            </div>
+                        </div>
+
+                        <!-- Right: Deployment & ARP Tool -->
+                        <div class="data-panel" style="flex: 1; display:flex; flex-direction: column;">
+                            <div class="panel-title">IOT DEPLOYMENT & SCANNER</div>
+                            <div style="padding: 1.5rem; overflow-y: auto; flex:1;">
+                                <button class="btn-enterprise" style="width: 100%; margin-bottom: 1rem; background: var(--primary);" onclick="runArpScan()"><i class="fas fa-search"></i> ARP NETWORK SCAN</button>
+                                
+                                <div id="arp-results" style="margin-bottom: 1.5rem;">
+                                    <div style="font-size: 0.8rem; color: #666; text-align: center;">Run scan to discover Raspberry Pis on local network or Twingate.</div>
+                                </div>
+
+                                <hr style="border: 0; border-top: 1px solid var(--border); margin: 1.5rem 0;">
+
+                                <h4 style="font-size: 0.8rem; margin-bottom: 1rem; color: var(--text-muted);">MANUAL PI CONNECTION</h4>
+                                <div style="display:flex; flex-direction: column; gap: 0.8rem;">
+                                    <input type="text" id="deploy-ip" class="control-input" placeholder="Node IP (e.g. 192.168.1.101)" style="min-width: 100%;">
+                                    <input type="text" id="deploy-user" class="control-input" placeholder="SSH Username (e.g. pi)" style="min-width: 100%;">
+                                    <input type="password" id="deploy-pwd" class="control-input" placeholder="SSH Password" style="min-width: 100%;">
+                                    
+                                    <button class="btn-enterprise" style="background: var(--success); width: 100%; margin-top: 0.5rem;" onclick="deployToNode()">
+                                        <i class="fas fa-magic"></i> INJECT AGENT CODE
+                                    </button>
+                                </div>
+                                <div id="deploy-status" style="margin-top: 1rem; font-size: 0.8rem; padding: 10px; border-radius: 4px; display: none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section id="alerts" class="tab-pane"><div class="data-panel"><div class="panel-title">System Alerts</div><div id="alerts-content" style="padding:2rem; color:#666;">No unacknowledged alerts found.</div></div></section>
+                <section id="audit" class="tab-pane"><div class="data-panel"><div class="panel-title">Audit Log</div><div id="audit-content" style="padding:2rem; color:#666;">Accessing secure audit storage...</div></div></section>
+
+            </main>
+        </div>
+    </div>
+    <script src="app.js?v=8"></script>
+</body>
+</html>
