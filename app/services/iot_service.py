@@ -92,13 +92,6 @@ class IoTService:
             except Exception as e:
                 logger.error(f"ARP Scan execution error: {e}")
 
-            # Include any registered mock/active nodes if scan list is empty
-            if not nodes:
-                nodes = [
-                    {"ip": "192.168.1.101", "mac": "b8:27:eb:1a:2b:3c", "type": "Raspberry Pi Device", "is_pi": True},
-                    {"ip": "192.168.1.102", "mac": "dc:a6:32:88:99:aa", "type": "Raspberry Pi Device", "is_pi": True}
-                ]
-
             return nodes
 
         return await asyncio.to_thread(_run_scan)
@@ -131,22 +124,6 @@ class IoTService:
 
     async def deploy_agent(self, ip: str, username: str, password: Optional[str] = None) -> Dict[str, Any]:
         """Deploy edge agent to remote Raspberry Pi via SSH and start service."""
-        # Simulated environment handling
-        if ip in ["192.168.1.101", "192.168.1.102", "10.0.0.42"]:
-            async with self._lock:
-                self.nodes[ip] = {
-                    "ip": ip,
-                    "status": "DEPLOYED",
-                    "last_seen": time.time(),
-                    "barcodes": 0,
-                    "logs": ["SSH Auth Success", "Agent Uploaded", "Service Active"],
-                    "cpu": 12.4,
-                    "mem": 28.1,
-                    "temp": 42.5,
-                    "uptime": "up 3 days"
-                }
-            return {"status": "success", "message": f"Code injected and agent started on {ip}"}
-
         def _deploy_sync() -> Dict[str, Any]:
             client = paramiko.SSHClient()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -227,15 +204,6 @@ while True:
 
     async def get_node_stats(self, ip: str, username: str, password: Optional[str]) -> Dict[str, Any]:
         """Query CPU, RAM, temperature, and uptime metrics from an IoT node via SSH."""
-        # Simulated nodes fallback
-        if ip in ["192.168.1.101", "192.168.1.102", "10.0.0.42"]:
-            stats = {"cpu": 15.2, "mem": 34.8, "temp": 43.1, "uptime": "up 2 days, 4 hours"}
-            async with self._lock:
-                if ip in self.nodes:
-                    self.nodes[ip].update(stats)
-                    self.nodes[ip]["last_seen"] = time.time()
-            return {"status": "ok", "stats": stats}
-
         cmd = (
             "python3 -c \""
             "import psutil, json, subprocess;"

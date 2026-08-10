@@ -28,8 +28,6 @@ services:
       - CDC_ENABLED=${CDC_ENABLED:-true}
       - CDC_USER=${CDC_USER:-root}
       - CDC_PASSWORD=${CDC_PASSWORD}
-      - SIMULATION_MODE=${SIMULATION_MODE:-false}
-      - AUTO_FALLBACK_SIMULATION=${AUTO_FALLBACK_SIMULATION:-true}
       - SMTP_ENABLED=${SMTP_ENABLED:-false}
       - SMTP_SERVER=${SMTP_SERVER:-smtp-relay.brevo.com}
       - SMTP_PORT=${SMTP_PORT:-587}

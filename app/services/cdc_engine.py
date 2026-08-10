@@ -4,7 +4,6 @@ import datetime
 import json
 import logging
 import os
-import random
 import threading
 import time
 from typing import Any, Callable, Dict, Optional
@@ -20,7 +19,7 @@ try:
     HAS_PYMYSQL_REPLICATION = True
 except ImportError:
     HAS_PYMYSQL_REPLICATION = False
-    logger.warning("pymysqlreplication not found. CDC will operate in simulation mode.")
+    logger.warning("pymysqlreplication not found. CDC will operate in standby mode.")
 
 class CDCEngine:
     def __init__(self, broadcast_callback: Callable[[Dict[str, Any]], Any]):
@@ -29,16 +28,14 @@ class CDCEngine:
         self.is_running = False
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
-        self._sim_task: Optional[asyncio.Task] = None
         
         # Metrics & Position Tracking
         self.events_processed = 0
         self.last_event_time: Optional[float] = None
-        self.status = "STOPPED"  # STOPPED, RUNNING, RECONNECTING, SIMULATING, FAILED
+        self.status = "STOPPED"  # STOPPED, RUNNING, RECONNECTING, FAILED
         self.last_log_file: Optional[str] = settings.CDC_LOG_FILE
         self.last_log_pos: Optional[int] = settings.CDC_LOG_POS
         self.last_error: Optional[str] = None
-        self.is_simulating = False
         self._loop: Optional[asyncio.AbstractEventLoop] = None
 
         # Load persisted position if available
@@ -72,7 +69,7 @@ class CDCEngine:
             logger.debug(f"Could not persist CDC state: {e}")
 
     async def start(self):
-        """Start the CDC worker or simulation generator."""
+        """Start the live CDC worker thread."""
         self._loop = asyncio.get_running_loop()
         self.is_running = True
         self._stop_event.clear()
@@ -81,15 +78,13 @@ class CDCEngine:
         if settings.CDC_ENABLED and HAS_PYMYSQL_REPLICATION:
             self._thread = threading.Thread(target=self._run_cdc_worker, name="CDCWorkerThread", daemon=True)
             self._thread.start()
+            logger.info("CDC Subsystem started successfully.")
         else:
-            logger.info("Live CDC disabled or pymysqlreplication missing. Relying on fallback simulation.")
-
-        # Start background simulator supervisor if auto-fallback or simulation mode is enabled
-        self._sim_task = asyncio.create_task(self._simulation_supervisor())
-        logger.info("CDC Subsystem started successfully.")
+            self.status = "DISABLED"
+            logger.info("Live CDC disabled or pymysqlreplication missing.")
 
     def stop(self):
-        """Signal the CDC worker and simulator to terminate cleanly."""
+        """Signal the CDC worker to terminate cleanly."""
         self.is_running = False
         self._stop_event.set()
         if self.stream:
@@ -98,9 +93,6 @@ class CDCEngine:
             except Exception:
                 pass
             self.stream = None
-
-        if self._sim_task and not self._sim_task.done():
-            self._sim_task.cancel()
 
         self._save_state()
         self.status = "STOPPED"
@@ -309,86 +301,11 @@ class CDCEngine:
                 serialized[k] = v if isinstance(v, (int, float, bool, str)) else str(v)
         return serialized
 
-    async def _simulation_supervisor(self):
-        """Simulation generator running when DB is offline or simulation mode is forced."""
-        sample_books = [
-            {"barcode": "300184920", "title": "Introduction to Algorithms, 4th Ed.", "borrower": "Alice Walker", "bnum": 1042},
-            {"barcode": "300294101", "title": "Design Patterns: Elements of Reusable Object-Oriented Software", "borrower": "Marcus Vance", "bnum": 1089},
-            {"barcode": "300847192", "title": "Computer Networks: A Systems Approach", "borrower": "Sarah Chen", "bnum": 2011},
-            {"barcode": "300481029", "title": "Database System Concepts, 7th Edition", "borrower": "David Kim", "bnum": 1150},
-            {"barcode": "300958172", "title": "Clean Code: A Handbook of Agile Software Craftsmanship", "borrower": "Elena Rostova", "bnum": 3044},
-            {"barcode": "300119482", "title": "Artificial Intelligence: A Modern Approach", "borrower": "Liam O'Connor", "bnum": 1822}
-        ]
-
-        while self.is_running:
-            from app.db.session import db
-            # Check if simulation should trigger
-            should_simulate = settings.SIMULATION_MODE or (settings.AUTO_FALLBACK_SIMULATION and not db.is_healthy())
-
-            if should_simulate:
-                self.is_simulating = True
-                if self.status != "RUNNING":
-                    self.status = "SIMULATING"
-
-                try:
-                    # Emit simulated checkout / return event every 8-15 seconds
-                    await asyncio.sleep(random.uniform(8.0, 15.0))
-                    if not self.is_running:
-                        break
-
-                    book = random.choice(sample_books)
-                    is_checkout = random.random() > 0.4
-                    table = "issues" if is_checkout else "old_issues"
-                    due_date = (datetime.datetime.now() + datetime.timedelta(days=14)).strftime("%Y-%m-%d")
-
-                    sim_data = {
-                        "issue_id": random.randint(10000, 99999),
-                        "itemnumber": random.randint(500, 2000),
-                        "barcode": book["barcode"],
-                        "title": book["title"],
-                        "borrowernumber": book["bnum"],
-                        "firstname": book["borrower"].split()[0],
-                        "surname": book["borrower"].split()[1] if len(book["borrower"].split()) > 1 else "",
-                        "issuedate": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_due": due_date,
-                        "returndate": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") if not is_checkout else None
-                    }
-
-                    alert = {
-                        "level": "success" if is_checkout else "info",
-                        "title": "📚 Book Checked Out" if is_checkout else "↩️ Book Returned",
-                        "msg": f"'{book['title'][:32]}...' checked out to {book['borrower']}" if is_checkout else f"'{book['title'][:32]}...' returned to desk"
-                    }
-
-                    payload = {
-                        "table": table,
-                        "type": "INSERT",
-                        "data": sim_data,
-                        "old_data": None,
-                        "timestamp": int(time.time()),
-                        "alert": alert,
-                        "source": "simulation_fallback"
-                    }
-
-                    self.events_processed += 1
-                    self.last_event_time = time.time()
-                    await self.broadcast_callback(payload)
-
-                except asyncio.CancelledError:
-                    break
-                except Exception as sim_err:
-                    logger.debug(f"Simulation cycle caught: {sim_err}")
-                    await asyncio.sleep(5)
-            else:
-                self.is_simulating = False
-                await asyncio.sleep(4)
-
     def get_health(self) -> Dict[str, Any]:
         """Return diagnostic health info for /api/health."""
         return {
             "status": self.status,
             "is_running": self.is_running,
-            "is_simulating": self.is_simulating,
             "events_processed": self.events_processed,
             "last_event_at": self.last_event_time,
             "binlog_position": {

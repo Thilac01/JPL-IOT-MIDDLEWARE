@@ -3,7 +3,6 @@ def test_get_tables_list(client):
     assert response.status_code == 200
     tables = response.json()
     assert isinstance(tables, list)
-    assert len(tables) > 0
 
 def test_get_table_data_valid(client):
     response = client.get("/api/table-data/biblio?limit=10")

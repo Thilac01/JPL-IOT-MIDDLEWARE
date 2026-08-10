@@ -1,7 +1,6 @@
 import os
 import time
 import psutil
-from typing import Any, Dict
 from fastapi import APIRouter, Response, status
 from app.core.config import settings
 from app.db.session import db
@@ -20,8 +19,7 @@ async def liveness_probe():
 @router.get("/ready", summary="Readiness Probe")
 async def readiness_probe(response: Response):
     """Readiness probe indicating if the service is ready to accept traffic."""
-    # Service is ready if simulation is active or DB connection is healthy
-    is_ready = settings.SIMULATION_MODE or db.is_healthy() or settings.AUTO_FALLBACK_SIMULATION
+    is_ready = db.is_healthy()
     if not is_ready:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return {"status": "unavailable", "reason": "Database connection not ready"}
@@ -30,7 +28,6 @@ async def readiness_probe(response: Response):
 @router.get("/api/health", summary="Detailed Diagnostic Health")
 async def full_health_diagnostic():
     """Comprehensive health and diagnostic status of all subsystems."""
-    # System metrics
     try:
         process = psutil.Process(os.getpid())
         mem_info = process.memory_info()
@@ -42,14 +39,14 @@ async def full_health_diagnostic():
 
     nodes = await iot_service.get_all_nodes()
 
-    # Read CDC health if cdc handler instance is active
+    # Read CDC health if active
     cdc_health = {}
     from app.routers.ws import cdc
     if cdc:
         cdc_health = cdc.get_health()
 
     return {
-        "status": "HEALTHY" if db.is_healthy() else ("SIMULATION" if settings.SIMULATION_MODE or settings.AUTO_FALLBACK_SIMULATION else "DEGRADED"),
+        "status": "HEALTHY" if db.is_healthy() else "DEGRADED",
         "version": settings.APP_VERSION,
         "environment": settings.ENVIRONMENT,
         "uptime_seconds": round(time.time() - START_TIME, 2),

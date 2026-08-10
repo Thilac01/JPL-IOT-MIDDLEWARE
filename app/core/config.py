@@ -54,9 +54,6 @@ class Settings(BaseSettings):
             return list(v)
         return ["*"]
 
-    # --- Simulation & Fallback Mode ---
-    SIMULATION_MODE: bool = False
-    AUTO_FALLBACK_SIMULATION: bool = True
 
     # --- SSH Tunnel Settings ---
     USE_SSH: bool = True
