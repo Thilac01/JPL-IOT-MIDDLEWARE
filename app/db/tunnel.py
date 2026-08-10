@@ -31,14 +31,20 @@ class SSHTunnelManager:
         logger.info(f"Establishing SSH Tunnel to {settings.SSH_HOST}:{settings.SSH_PORT}...")
 
         def _open_tunnel() -> SSHTunnelForwarder:
+            kwargs = {
+                "ssh_username": settings.SSH_USER,
+                "remote_bind_address": ('127.0.0.1', 3306),
+                "local_bind_address": ('127.0.0.1', 0),
+                "set_keepalive": float(settings.SSH_KEEPALIVE)
+            }
+            if settings.SSH_PASSWORD:
+                kwargs["ssh_password"] = settings.SSH_PASSWORD
+            if settings.SSH_PKEY:
+                kwargs["ssh_pkey"] = settings.SSH_PKEY
+
             tunnel = SSHTunnelForwarder(
                 (settings.SSH_HOST, settings.SSH_PORT),
-                ssh_username=settings.SSH_USER,
-                ssh_password=settings.SSH_PASSWORD,
-                ssh_pkey=settings.SSH_PKEY,
-                remote_bind_address=('127.0.0.1', 3306),
-                local_bind_address=('127.0.0.1', 0),
-                set_missing_host_key_policy='AutoAddPolicy'
+                **kwargs
             )
             tunnel.start()
             return tunnel

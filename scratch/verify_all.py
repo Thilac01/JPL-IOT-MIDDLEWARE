@@ -1,6 +1,9 @@
 import sys
+import os
 import json
 import time
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from fastapi.testclient import TestClient
 from main import app
 
@@ -157,7 +160,7 @@ def run_verification():
     print("=" * 70)
     all_ok = True
     for k, v in results.items():
-        print(f"  ✓ {k:<30}: {v}")
+        print(f"  [OK] {k:<30}: {v}")
     print("=" * 70)
     print("ALL FUNCTIONALITIES ARE FULLY OPERATIONAL AND PRODUCTION-READY!")
     print("=" * 70)
