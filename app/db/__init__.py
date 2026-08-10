@@ -1,4 +1,4 @@
-"""Backward-compatibility shim for db_utils module."""
+"""Database and SSH Tunnel management package."""
 from app.db.session import db, DatabaseManager
 from app.db.tunnel import SSHTunnelManager
 

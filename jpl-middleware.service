@@ -1,0 +1,29 @@
+[Unit]
+Description=JPL Security & IoT Middleware Daemon
+After=network.target remote-fs.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/jpl-middleware
+ExecStart=/usr/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5s
+EnvironmentFile=/opt/jpl-middleware/.env
+
+# Security Hardening
+PrivateTmp=true
+ProtectSystem=full
+NoNewPrivileges=true
+
+# Resource Limits
+LimitNOFILE=65535
+
+# Standard Output / Journald Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jpl-middleware
+
+[Install]
+WantedBy=multi-user.target

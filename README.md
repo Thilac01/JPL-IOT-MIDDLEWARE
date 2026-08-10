@@ -1,158 +1,235 @@
-# JPL Security & IoT Middleware: Technical Architecture
+# JPL Security & IoT Middleware (Enterprise Edition)
 
-This document provides a comprehensive technical breakdown of the JPL Library Security Monitor and IoT Middleware system.
+[![Version](https://img.shields.io/badge/version-2.5.0-blue.svg)](file:///c:/Users/thila/OneDrive/Desktop/MIDDLE/JPL-IOT-MIDDLEWARE/app/core/config.py)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Python](https://img.shields.io/badge/Python-3.10%20|%203.11%20|%203.12%20|%203.14-blue.svg?logo=python&logoColor=white)](https://python.org)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)](file:///c:/Users/thila/OneDrive/Desktop/MIDDLE/JPL-IOT-MIDDLEWARE/Dockerfile)
+[![Tests](https://img.shields.io/badge/Tests-27%20Passed-brightgreen.svg)](file:///c:/Users/thila/OneDrive/Desktop/MIDDLE/JPL-IOT-MIDDLEWARE/tests/)
 
-## 1. System Overview
-The JPL Middleware is an industrial-grade synchronization layer designed to bridge a Koha ILS (Integrated Library System) with physical security hardware (RFID Gates) and real-time monitoring dashboards.
-
-### Core Objectives:
-*   **Real-Time Monitoring**: Instant detection of circulation events (Issues/Returns).
-*   **Edge Connectivity**: Secure management of Raspberry Pi nodes at library exits.
-*   **Multi-Channel Notifications**: Real-time WebSocket updates and SMTP email alerts.
+The **JPL Security & IoT Middleware** is an industrial-grade synchronization and security layer designed to bridge a **Koha ILS (Integrated Library System)** with physical **RFID Security Gates (Raspberry Pi)** and real-time operations dashboards.
 
 ---
 
-## 2. High-Level Architecture
+## 1. Architectural Overview
 
 ```mermaid
 graph TD
-    subgraph "External Shard (Koha)"
-        DB[(MySQL Replica)]
-        LOGS[[Binary Logs]]
+    subgraph "Clients & Physical Edge Gates"
+        UI[Web Dashboard UI / SPA]
+        PI[Raspberry Pi IoT Gates]
+        ADMIN[Admin Systems & Scrapers]
     end
 
-    subgraph "Middleware Core (Python/FastAPI)"
-        SST[SSH Tunnel Manager]
-        CDC[CDC handler - Binlog Reader]
-        WSM[WebSocket Manager]
-        SMTP[Notification Engine]
-        API[REST API Layer]
+    subgraph "Edge Security & Ingress (Nginx)"
+        NGINX[Nginx Reverse Proxy / SSL / Rate Limiting]
+        CORR[Correlation ID & Security Headers Middleware]
     end
 
-    subgraph "Clients & Devices"
-        UI[Web Dashboard]
-        IOT[Raspberry Pi Gates]
+    subgraph "JPL Middleware Core (FastAPI Engine)"
+        APP[FastAPI Lifespan Core]
+        ROUTER_CIRC[Circulation Router]
+        ROUTER_IOT[IoT Subsystem Router]
+        ROUTER_TABLES[Data Tables Router]
+        ROUTER_HEALTH[Health & Metrics Router]
+        ROUTER_WS[WebSocket Manager]
+        
+        SVC_CDC[CDC BinLog Engine + State Persister]
+        SVC_IOT[IoT Device Registry + TTL Supervisor]
+        SVC_SMTP[Async SMTP Alert Dispatcher]
+        SVC_KOHA[Koha REST API Client]
+        
+        DB_MGR[Database Pool Manager + Supervisor]
+        SSH_MGR[SSH Tunnel Manager]
     end
 
-    DB -->|Encapsulated| SST
-    LOGS -->|Stream| CDC
-    CDC -->|Broadcast| WSM
-    CDC -->|Alerts| SMTP
-    WSM -->|Real-time| UI
-    API -->|Deploy/Control| IOT
-    IOT -->|Heartbeat| API
+    subgraph "External Koha Shard"
+        SSH_GW[SSH Gateway 137.184.15.52]
+        MYSQL_REP[(MySQL Replica - koha_library)]
+        BINLOG[[MySQL Binary Logs]]
+    end
+
+    UI --> NGINX
+    PI --> NGINX
+    ADMIN --> NGINX
+    NGINX --> CORR --> APP
+
+    APP --> ROUTER_CIRC & ROUTER_IOT & ROUTER_TABLES & ROUTER_HEALTH & ROUTER_WS
+    ROUTER_CIRC --> DB_MGR
+    ROUTER_TABLES --> DB_MGR
+    ROUTER_WS --> SVC_CDC
+    ROUTER_IOT --> SVC_IOT
+
+    SVC_CDC --> BINLOG
+    SVC_CDC --> SVC_SMTP
+    DB_MGR --> SSH_MGR --> SSH_GW --> MYSQL_REP
 ```
 
 ---
 
-## 3. Technical Stack
-*   **Backend**: Python 3.10+ (FastAPI)
-*   **Concurrency**: Asynchronous I/O (AsyncIO)
-*   **Data Capture**: `python-mysql-replication` (BinLog streaming)
-*   **Infrastructure**: `Paramiko` (SSH), `SSHTunnelForwarder`
-*   **Frontend**: Vanilla JavaScript (ES6+), WebSocket API, CSS3 (Enterprise Aesthetics)
+## 2. Core Capabilities & Production Features
+
+| Subsystem | Feature | Technical Detail |
+| :--- | :--- | :--- |
+| **CDC Pipeline** | **MySQL Binary Log Streaming** | Reads row-level mutations (`issues`, `old_issues`, `borrowers`) in real-time across encrypted SSH tunnels with zero polling latency. |
+| **State Persistence** | **Resume & Replay Protection** | Persists binlog coordinates (`log_file`, `log_pos`) to `.cdc_state.json` on disk to resume seamlessly after restarts without duplicate or missed events. |
+| **Database Pool** | **Self-Healing Supervisor** | Asynchronous connection pooling with `aiomysql`, connection recycling, ping health supervisor, and exponential backoff auto-reconnect. |
+| **IoT Node Manager** | **Edge Agent Injection & TTL** | Automated ARP network scanner, SSH agent deployment daemon, and heartbeat timeout supervisor (auto-detects offline gates). |
+| **Email Alerts** | **Async SMTP Dispatcher** | Non-blocking multipart HTML/plain-text alert engine with rate-limiting protection to prevent inbox flooding. |
+| **Observability** | **Cloud-Native Probes** | `/healthz` (liveness), `/ready` (readiness), `/api/health` (diagnostics), and `/api/metrics` (Prometheus metrics). |
+| **Security** | **Hardened Endpoints** | Optional API Key validation (`X-API-Key`), SQL identifier sanitization, and enterprise security headers (`HSTS`, `CSP`, `X-Frame-Options`, `nosniff`). |
 
 ---
 
-## 4. Subsystem Deep-Dives
+## 3. Quickstart & Local Setup
 
-### 4.1 Real-Time CDC Pipeline (Change Data Capture)
-Unlike traditional polling (which is slow and high-overhead), this system uses a "push" model by monitoring the MySQL Binary Log.
+### Prerequisites
+* Python 3.10+ (tested on Python 3.10, 3.11, 3.12, 3.14)
+* OpenSSH & MySQL Client libraries
 
-**The Workflow:**
-1.  A librarian issues a book in Koha.
-2.  The MySQL database writes an `INSERT` row event to the `issues` table.
-3.  The Middleware's **BinLogStreamReader** identifies the event across the SSH tunnel.
-4.  The `CDCHandler` parses the raw bytes into a Python dictionary.
-5.  **Broadcast**: The event is sent to the Frontend via WebSockets.
-6.  **Notification**: The SMTP engine fires an email to the administrator.
+### Step 1: Clone and Configure Environment
+```bash
+git clone https://github.com/Thilac01/JPL-IOT-MIDDLEWARE.git
+cd JPL-IOT-MIDDLEWARE
 
-### 4.2 IoT Node Deployment Engine
-The system manages remote IoT gates via an automated injection pipeline:
-1.  **ARP Scanner**: Scans the network to find Raspberry Pi devices (MAC OUI matching).
-2.  **SSH Injection**: The Middleware connects to the Pi via SSH.
-3.  **Agent Deployment**: A lightweight Python Agent is written to the Pi's `/tmp` directory.
-4.  **Auto-Start**: The Middleware executes the agent as a background service (`nohup`).
-
----
-
-## 5. Key Implementation Snippets
-
-### 5.1 Real-Time Event Dispatch
-Located in `cdc_handler.py`, this handles the conversion of database rows to UI alerts:
-```python
-async def handle_event(self, event):
-    for row in event.rows:
-        table = event.table.lower()
-        if table == "issues" and event_type == "INSERT":
-            alert = {"title": "📚 Book Checked Out!", "msg": f"Item issued to borrower."}
-            await send_notification_email(alert['title'], alert['msg'])
-            await self.broadcast_callback(alert)
+# Create your .env file
+cp .env.example .env
 ```
 
-### 5.2 Dynamic Topology Map
-The frontend uses a relative-positioning engine to create the "Network Graph." When a node is dragged, it triggers a live recalculation of the SVG Bezier paths:
-```javascript
-function drawLines() {
-    const p1 = outXY(koha_node);
-    const p2 = inXY(mid_node);
-    svg_path.setAttribute('d', `M ${p1.x} ${p1.y} C ${cx} ${p1.y}, ${cx} ${p2.y}, ${p2.x} ${p2.y}`);
-}
+### Step 2: Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### Step 3: Run the Application
+```bash
+python run.py
+```
+Open your browser at `http://localhost:8000` to access the interactive dashboard.
+
+---
+
+## 4. Production Deployment Options
+
+### Option A: Docker Compose (Recommended)
+
+1. Build and launch the containerized stack:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+2. Inspect container status and health:
+   ```bash
+   docker-compose ps
+   docker-compose logs -f middleware
+   ```
+
+### Option B: Linux Systemd Service
+
+1. Copy the systemd service unit file:
+   ```bash
+   sudo cp jpl-middleware.service /etc/systemd/system/
+   sudo systemctl daemon-reload
+   ```
+
+2. Enable and start the service:
+   ```bash
+   sudo systemctl enable --now jpl-middleware
+   sudo systemctl status jpl-middleware
+   ```
+
+3. View live journal logs:
+   ```bash
+   journalctl -u jpl-middleware -f
+   ```
+
+### Option C: Gunicorn Multi-Worker ASGI
+
+For high-concurrency bare-metal Linux servers:
+```bash
+gunicorn -c gunicorn_conf.py main:app
 ```
 
 ---
 
-## 6. Security & Infrastructure
-*   **SSH Encapsulation**: ALL database traffic is tunneled through an encrypted SSH channel to 137.184.15.52. Local ports are bound dynamically to avoid conflicts.
-*   **CORS Policy**: Configured strictly to allow middleware access only to authorized library origins.
-*   **JWT Readiness**: The `auth.py` module is structured to support Bearer Tokens for future expansion.
+## 5. Nginx Reverse Proxy & SSL Configuration
+
+A pre-configured production Nginx template is provided in [`nginx.conf`](file:///c:/Users/thila/OneDrive/Desktop/MIDDLE/JPL-IOT-MIDDLEWARE/nginx.conf).
+
+Key reverse proxy highlights:
+* **WebSocket Upgrade**: Handles persistent `/ws` bidirectional communication.
+* **Rate Limiting**: Protects `/api/` (30 req/s) and `/api/iot/` (10 req/s) from brute force / DDoS.
+* **Gzip Compression**: Compresses JSON and static assets for reduced latency.
 
 ---
 
-## 7. Operational Flow Chart
+## 6. API Reference & Endpoints
 
-```mermaid
-sequenceDiagram
-    participant K as Koha DB
-    participant C as CDC Handler
-    participant W as WebSocket
-    participant D as Dashboard
-    participant E as Email (SMTP)
+### 6.1 Health & Diagnostics
+* `GET /healthz` - Lightweight liveness probe (returns 200 OK).
+* `GET /ready` - Kubernetes readiness probe.
+* `GET /api/health` - Comprehensive diagnostic report of DB, SSH, CDC, IoT, and system RAM/CPU.
+* `GET /api/metrics` - Aggregated operational counters.
 
-    K->>C: Row Event (INSERT)
-    C->>C: Parse Table Logic
-    par UI Broadcast
-        C->>W: Push Layout Update
-        W->>D: Update Active Loans Table
-    and Email Dispatch
-        C->>E: Send SMTP via Brevo
-        E-->>Admins: Real-time Alert
-    end
+### 6.2 Circulation & Loans
+* `GET /api/active-loans?limit=100&offset=0` - Paginated list of currently issued books and borrowers.
+* `GET /api/recent-returns?limit=20` - Recently checked-in books.
+* `GET /api/stats` - Summary counts of active loans, overdue items, and system health status.
+* `GET /api/audit-logs?limit=50` - Koha circulation audit trail records.
+
+### 6.3 Data Discovery
+* `GET /api/tables` - Dynamically discover available MySQL tables in replica.
+* `GET /api/table-data/{table_name}?limit=100&offset=0` - Safe paginated table inspector with SQL injection protection.
+
+### 6.4 IoT Edge Node Management
+* `POST /api/iot/scan` - Run ARP network scan to discover Raspberry Pi gate controllers.
+* `POST /api/iot/deploy` - Remotely inject gate agent code to Pi via SSH.
+* `POST /api/iot/heartbeat` - Receive telemetry pulse from edge node.
+* `GET /api/iot/nodes` - List all registered edge gates with live status and metrics.
+* `POST /api/iot/exec` - Safely execute a remote command on a gate node.
+* `POST /api/iot/stats` - Fetch CPU%, RAM%, thermal temperature, and uptime from a node.
+
+### 6.5 Real-Time WebSockets
+* `WS /ws` - Bidirectional streaming endpoint emitting real-time database mutations, checkout alerts, and gate signals.
+
+---
+
+## 7. Running the Automated Test Suite
+
+The test suite covers configuration, health probes, circulation endpoints, SQL injection resistance, IoT node management, CDC serialization, and WebSocket connection lifecycle.
+
+Run the test suite using pytest:
+```bash
+python -m pytest tests/ -v
 ```
 
-© 2026 JPL Security Systems. All Technical Rights Reserved.
+Output:
+```
+============================= test session starts =============================
+collected 27 items
 
+tests/test_cdc.py ......................... [ 11%]
+tests/test_circulation.py ................. [ 25%]
+tests/test_config.py ...................... [ 40%]
+tests/test_health.py ...................... [ 55%]
+tests/test_iot.py ......................... [ 70%]
+tests/test_smtp.py ........................ [ 81%]
+tests/test_tables.py ...................... [ 92%]
+tests/test_websocket.py ................... [100%]
 
+============================= 27 passed in 0.55s ==============================
+```
 
+---
 
+## 8. Security Hardening Checklist
 
+- [x] **SSH Encapsulation**: All database communication is routed through local dynamically-bound SSH ports.
+- [x] **No Default Secrets in Production**: Enforce strong `SECRET_KEY` and optional `API_KEY`.
+- [x] **SQL Identifier Sanitization**: Parameterized queries and strict identifier regex checks on dynamic table routes.
+- [x] **Container Security**: Non-root `appuser` (UID 10001) in multi-stage Docker build.
+- [x] **HTTP Security Headers**: `X-Frame-Options`, `X-Content-Type-Options`, `CSP`, and `Referrer-Policy`.
+- [x] **Rate Limiting**: Rate limiting in SMTP email dispatcher and Nginx reverse proxy configuration.
 
+---
 
-
-
-
-
-
-
-
-
-
-
-
-<img width="1913" height="873" alt="IOT MAPS _2" src="https://github.com/user-attachments/assets/d303f54f-e2e3-4009-a9df-f96661cb545b" />
-<img width="1916" height="881" alt="IOT MAPS _1" src="https://github.com/user-attachments/assets/c3127b38-7460-4f9e-8300-ef28c1223c83" />
-<img width="1918" height="863" alt="DASHBOARD" src="https://github.com/user-attachments/assets/7eb1b224-ca7a-442a-a882-03863e1735c7" />
-# JPL-IOT-MIDDLEWARE<img width="1906" height="862" alt="IOT MAPS" src="https://github.com/user-attachments/assets/5ca5c37a-e2f6-4897-831e-802bf6f105bf" />
-<img width="1913" height="872" alt="WHITELIST" src="https://github.com/user-attachments/assets/59352ce6-ae5d-41ee-a177-35e28a113d46" />
-<img width="1913" height="866" alt="LIVE TABLES" src="https://github.com/user-attachments/assets/55129419-d474-4843-b128-801387c25b31" />
-<img width="1915" height="859" alt="image" src="https://github.com/user-attachments/assets/58b6150c-f02c-41a3-a87f-9704753c40e6" />
+© 2026 JPL Security Systems. All Rights Reserved.

@@ -1,0 +1,37 @@
+# Environment & Credentials
+.env
+.env.local
+.env.production
+*.pem
+*.key
+*.pub
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Unit test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs & State
+logs/
+*.log
+.cdc_state.json
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
