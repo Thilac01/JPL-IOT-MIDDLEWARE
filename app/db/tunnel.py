@@ -55,6 +55,7 @@ class SSHTunnelManager:
                 timeout=settings.SSH_TIMEOUT
             )
             self.local_bind_port = self.tunnel.local_bind_port
+            settings.REPLICA_HOST = "127.0.0.1"
             settings.REPLICA_PORT = self.local_bind_port
             self.status = "HEALTHY"
             self.last_error = None

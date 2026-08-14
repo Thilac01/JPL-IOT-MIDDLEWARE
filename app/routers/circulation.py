@@ -17,10 +17,13 @@ async def get_active_loans(
         return []
 
     query = """
-        SELECT i.issue_id, it.barcode, b.title, p.firstname, p.surname, i.issuedate, i.date_due
+        SELECT i.issue_id, it.barcode, b.title, 
+               COALESCE(bi.publicationyear, b.copyrightdate) as publication_year,
+               p.firstname, p.surname, i.issuedate, i.date_due
         FROM issues i
         JOIN items it ON i.itemnumber = it.itemnumber
         JOIN biblio b ON it.biblionumber = b.biblionumber
+        LEFT JOIN biblioitems bi ON b.biblionumber = bi.biblionumber
         JOIN borrowers p ON i.borrowernumber = p.borrowernumber
         ORDER BY i.issuedate DESC
         LIMIT %s OFFSET %s
@@ -34,17 +37,20 @@ async def get_active_loans(
 
 @router.get("/api/recent-returns", summary="Get Recent Returns")
 async def get_recent_returns(
-    limit: int = Query(default=20, ge=1, le=100, description="Max returns to return")
+    limit: int = Query(default=50, ge=1, le=500, description="Max returns to return")
 ) -> List[Dict[str, Any]]:
     """Retrieve recently returned books from Koha old_issues."""
     if not db.is_healthy():
         return []
 
     query = """
-        SELECT oi.issue_id, b.title, p.firstname, p.surname, oi.returndate
+        SELECT oi.issue_id, it.barcode, b.title, 
+               COALESCE(bi.publicationyear, b.copyrightdate) as publication_year,
+               p.firstname, p.surname, oi.returndate
         FROM old_issues oi
         JOIN items it ON oi.itemnumber = it.itemnumber
         JOIN biblio b ON it.biblionumber = b.biblionumber
+        LEFT JOIN biblioitems bi ON b.biblionumber = bi.biblionumber
         JOIN borrowers p ON oi.borrowernumber = p.borrowernumber
         ORDER BY oi.returndate DESC
         LIMIT %s

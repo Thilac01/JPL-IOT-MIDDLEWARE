@@ -1,3 +1,25 @@
+// Global limits and handlers
+window.currentLoansLimit = 100;
+window.currentReturnsLimit = 50;
+
+window.changeLoansLimit = function(val) {
+    window.currentLoansLimit = parseInt(val, 10) || 100;
+    const tbody = document.querySelector('#active-loans-table tbody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:12px;"><i class="fas fa-spinner fa-spin"></i> Fetching ' + window.currentLoansLimit + ' records...</td></tr>';
+    }
+    fetchLoans();
+};
+
+window.changeReturnsLimit = function(val) {
+    window.currentReturnsLimit = parseInt(val, 10) || 50;
+    const tbody = document.querySelector('#recent-returns-table tbody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888;padding:12px;"><i class="fas fa-spinner fa-spin"></i> Fetching ' + window.currentReturnsLimit + ' records...</td></tr>';
+    }
+    fetchReturns();
+};
+
 // Enterprise Middle-ware logic
 let eventCount = 0;
 let eventsThisMin = 0;
@@ -46,6 +68,16 @@ setInterval(() => {
 }, 60000);
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Attach explicit change listeners to limit dropdowns
+    const loansSelect = document.getElementById('loans-limit-select');
+    if (loansSelect) {
+        loansSelect.addEventListener('change', (e) => window.changeLoansLimit(e.target.value));
+    }
+    const returnsSelect = document.getElementById('returns-limit-select');
+    if (returnsSelect) {
+        returnsSelect.addEventListener('change', (e) => window.changeReturnsLimit(e.target.value));
+    }
+
     initClock();
     initTabs();
     initWebSocket();
@@ -341,17 +373,19 @@ async function fetchLoans() {
     const tbody = document.querySelector('#active-loans-table tbody');
     const whitelistTbody = document.querySelector('#whitelist-table tbody');
     try {
-        const res = await fetch('/api/active-loans');
+        const res = await fetch(`/api/active-loans?limit=${window.currentLoansLimit || 100}&t=${Date.now()}`);
         const data = await res.json();
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">No active streams</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">No active streams</td></tr>';
             if (whitelistTbody) whitelistTbody.innerHTML = '<tr><td colspan="5" style="text-align:center">No assets currently whitelisted for exit.</td></tr>';
             return;
         }
         tbody.innerHTML = data.map(d => `
             <tr>
-                <td><b>${d.firstname} ${d.surname}</b></td>
-                <td>${d.title}</td>
+                <td><span style="font-family: 'JetBrains Mono', monospace; font-weight:700; color:var(--primary);"><i class="fas fa-barcode" style="margin-right: 4px; color: #888;"></i>${d.barcode || '—'}</span></td>
+                <td><b>${d.firstname || ''} ${d.surname || ''}</b></td>
+                <td>${d.title || '—'}</td>
+                <td><span style="font-family: 'JetBrains Mono', monospace; font-weight:600; color:#555;">${d.publication_year || '—'}</span></td>
                 <td>${formatDate(d.issuedate)}</td>
                 <td style="color: ${isOverdue(d.date_due)?'#dc3545':'inherit'}; font-weight:600;">${formatDate(d.date_due)}</td>
             </tr>
@@ -369,7 +403,7 @@ async function fetchLoans() {
             `).join('');
         }
     } catch (e) { 
-        tbody.innerHTML = '<tr><td colspan="4">Sync Error</td></tr>'; 
+        tbody.innerHTML = '<tr><td colspan="6">Sync Error</td></tr>'; 
         if (whitelistTbody) whitelistTbody.innerHTML = '<tr><td colspan="5">Integration Error with RFID Gate module</td></tr>';
     }
 }
@@ -377,20 +411,22 @@ async function fetchLoans() {
 async function fetchReturns() {
     const tbody = document.querySelector('#recent-returns-table tbody');
     try {
-        const res = await fetch('/api/recent-returns');
+        const res = await fetch(`/api/recent-returns?limit=${window.currentReturnsLimit || 50}&t=${Date.now()}`);
         const data = await res.json();
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center">Waiting...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">Waiting...</td></tr>';
             return;
         }
         tbody.innerHTML = data.map(d => `
             <tr>
-                <td><b>${d.title}</b></td>
-                <td>${d.firstname}</td>
+                <td><span style="font-family: 'JetBrains Mono', monospace; font-weight:700; color:var(--primary);"><i class="fas fa-barcode" style="margin-right: 4px; color: #888;"></i>${d.barcode || '—'}</span></td>
+                <td><b>${d.title || '—'}</b></td>
+                <td><span style="font-family: 'JetBrains Mono', monospace; font-weight:600; color:#555;">${d.publication_year || '—'}</span></td>
+                <td>${d.firstname || ''} ${d.surname || ''}</td>
                 <td>${formatDate(d.returndate)}</td>
             </tr>
         `).join('');
-    } catch (e) { tbody.innerHTML = '<tr><td colspan="3">Sync Error</td></tr>'; }
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="5">Sync Error</td></tr>'; }
 }
 
 // Table Discovery Logic
@@ -470,8 +506,19 @@ function filterCurrentTable() {
 
 function formatDate(dateStr) {
     if (!dateStr) return '—';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return String(dateStr);
+        return d.toLocaleDateString('en-GB', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+    } catch (e) {
+        return String(dateStr);
+    }
 }
 
 function isOverdue(dateStr) {

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enterprise Security Monitor | Library IoT</title>
-    <link rel="stylesheet" href="style.css?v=3">
+    <title>Digital Article Surveillance | Library IoT</title>
+    <link rel="stylesheet" href="style.css?v=12">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -14,7 +14,7 @@
         <header class="enterprise-header">
             <div class="brand">
                 <i class="fas fa-microchip" style="font-size: 1.2rem; color: var(--secondary)"></i>
-                <h1>JPL <b>IOT</b> MIDDLEWARE</h1>
+                <h1>JPL <b>DAS</b> MIDDLEWARE</h1>
             </div>
             <div class="header-actions">
                 <div id="connection-status" class="status-badge offline">DISCONNECTED</div>
@@ -68,7 +68,7 @@
                         </div>
                         <div class="kpi-card success">
                             <div class="kpi-data">
-                                <h4>Active Loans</h4>
+                                <h4>TOTAL CHECK OUT</h4>
                                 <span id="stat-loans">--</span>
                             </div>
                             <div class="kpi-icon"><i class="fas fa-book-reader"></i></div>
@@ -91,20 +91,46 @@
 
                     <div style="display: flex; gap: 1.5rem; flex: 1; min-height: 0; min-width: 0;">
                         <div class="data-panel" style="flex: 1.5;">
-                            <div class="panel-title">ACTIVE LOANS PIPELINE</div>
+                            <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>CIRCULATION - RECENT CHECK OUT LIST</span>
+                                <div class="limit-selector-group">
+                                    <label for="loans-limit-select">Show:</label>
+                                    <select id="loans-limit-select" class="limit-select" onchange="changeLoansLimit(this.value)">
+                                        <option value="10">Last 10</option>
+                                        <option value="25">Last 25</option>
+                                        <option value="50">Last 50</option>
+                                        <option value="100" selected>Last 100</option>
+                                        <option value="200">Last 200</option>
+                                        <option value="500">Last 500</option>
+                                    </select>
+                                </div>
+                            </div>
                             <div class="table-wrapper">
                                 <table id="active-loans-table">
-                                    <thead><tr><th>BORROWER</th><th>ASSET TITLE</th><th>ISSUED</th><th>DUE</th></tr></thead>
-                                    <tbody><tr class="loading"><td colspan="4">Initializing stream...</td></tr></tbody>
+                                    <thead><tr><th>BARCODE</th><th>BORROWER</th><th>ASSET TITLE</th><th>YEAR</th><th>ISSUED</th><th>DUE</th></tr></thead>
+                                    <tbody><tr class="loading"><td colspan="6">Initializing stream...</td></tr></tbody>
                                 </table>
                             </div>
                         </div>
                         <div class="data-panel" style="flex: 1;">
-                            <div class="panel-title">RECENT RETURNS</div>
+                            <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>CIRCULATION - RECENT CHECK IN LIST</span>
+                                <div class="limit-selector-group">
+                                    <label for="returns-limit-select">Show:</label>
+                                    <select id="returns-limit-select" class="limit-select" onchange="changeReturnsLimit(this.value)">
+                                        <option value="10">Last 10</option>
+                                        <option value="20">Last 20</option>
+                                        <option value="50" selected>Last 50</option>
+                                        <option value="100">Last 100</option>
+                                        <option value="200">Last 200</option>
+                                        <option value="500">Last 500</option>
+                                    </select>
+                                </div>
+                            </div>
                             <div class="table-wrapper">
                                 <table id="recent-returns-table">
-                                    <thead><tr><th>ASSET</th><th>BORROWER</th><th>TIME</th></tr></thead>
-                                    <tbody><tr class="loading"><td colspan="3">Waiting for data...</td></tr></tbody>
+                                    <thead><tr><th>BARCODE</th><th>ASSET TITLE</th><th>YEAR</th><th>BORROWER</th><th>TIME</th></tr></thead>
+                                    <tbody><tr class="loading"><td colspan="5">Waiting for data...</td></tr></tbody>
                                 </table>
                             </div>
                         </div>
@@ -284,6 +310,6 @@
             </main>
         </div>
     </div>
-    <script src="app.js?v=8"></script>
+    <script src="app.js?v=12"></script>
 </body>
 </html>
