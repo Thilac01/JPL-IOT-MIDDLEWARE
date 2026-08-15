@@ -4,12 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Digital Article Surveillance | Library IoT</title>
-    <link rel="stylesheet" href="style.css?v=12">
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=20">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Interactive Charting Engine -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="app-container">
+    <!-- Enterprise Light-Theme Login Page -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-brand-icon">
+                    <i class="fas fa-microchip"></i>
+                </div>
+                <h2>JPL <b>DAS</b> MIDDLEWARE</h2>
+                <p>Digital Article Surveillance & IoT Access Management</p>
+                <div class="login-portal-badge"><i class="fas fa-shield-alt"></i> Sign In to Portal</div>
+            </div>
+
+            <form id="login-form" onsubmit="handleLoginSubmit(event)">
+                <div id="login-error" class="login-error" style="display: none;">
+                    <i class="fas fa-exclamation-circle"></i> <span id="login-error-text">Invalid username or password</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="login-username"><i class="fas fa-user"></i> Username</label>
+                    <input type="text" id="login-username" class="login-input" placeholder="Enter username" required autocomplete="username" autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label for="login-password"><i class="fas fa-lock"></i> Password</label>
+                    <input type="password" id="login-password" class="login-input" placeholder="Enter password" required autocomplete="current-password">
+                </div>
+
+                <button type="submit" id="login-btn" class="btn-login">
+                    <i class="fas fa-sign-in-alt"></i> SIGN IN
+                </button>
+            </form>
+            
+            <div class="login-footer">
+                <span><i class="fas fa-lock"></i> Secure Enterprise Session &bull; Multi-Tier Role-Based Access</span>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="app-container" id="app-container" style="display: none;">
         <!-- WSO2 Header -->
         <header class="enterprise-header">
             <div class="brand">
@@ -19,9 +60,16 @@
             <div class="header-actions">
                 <div id="connection-status" class="status-badge offline">DISCONNECTED</div>
                 <div style="font-size: 0.8rem; opacity: 0.8;" id="clock">00:00:00</div>
-                <div class="user-info" style="font-size: 0.8rem; font-weight: 600;">
-                    <i class="fas fa-user-circle"></i> admin
+                <div class="user-profile-badge">
+                    <div class="user-avatar" id="header-avatar"><i class="fas fa-user-shield"></i></div>
+                    <div class="user-text">
+                        <span id="user-display-name" class="user-name">admin</span>
+                        <span id="user-role-badge" class="role-badge role-technical">TECHNICAL</span>
+                    </div>
                 </div>
+                <button class="btn-header-logout" onclick="logout()" title="Sign Out">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
             </div>
         </header>
 
@@ -32,20 +80,27 @@
                     <a href="#" class="nav-item active" data-tab="dashboard">
                         <i class="fas fa-tachometer-alt"></i><span>DASHBOARD</span>
                     </a>
-                    <a href="#" class="nav-item" data-tab="live-tables">
+                    <a href="#" class="nav-item technical-only" data-tab="live-tables" data-role="technical">
                         <i class="fas fa-database"></i><span>LIVE TABLES</span>
                     </a>
                     <a href="#" class="nav-item" data-tab="whitelist">
                         <i class="fas fa-shield-alt"></i><span>WHITELIST</span>
                     </a>
-                    <a href="#" class="nav-item" data-tab="iot-maps">
+                    <a href="#" class="nav-item technical-only" data-tab="iot-maps" data-role="technical">
                         <i class="fas fa-map-marked-alt"></i><span>IOT MAPS</span>
                     </a>
                     <a href="#" class="nav-item" data-tab="alerts">
                         <i class="fas fa-exclamation-circle"></i><span>ALERTS</span>
                     </a>
-                    <a href="#" class="nav-item" data-tab="audit">
+                    <a href="#" class="nav-item technical-only" data-tab="audit" data-role="technical">
                         <i class="fas fa-clipboard-list"></i><span>AUDIT LOG</span>
+                    </a>
+                    <!-- Dedicated Super User Tabs -->
+                    <a href="#" class="nav-item superuser-only" data-tab="user-management" data-role="superuser">
+                        <i class="fas fa-users-cog"></i><span>USER MANAGEMENT</span>
+                    </a>
+                    <a href="#" class="nav-item superuser-only" data-tab="analytics" data-role="superuser">
+                        <i class="fas fa-chart-line"></i><span>SYSTEM ANALYTICS</span>
                     </a>
                 </nav>
             </aside>
@@ -59,6 +114,81 @@
                 <!-- Dashboard Tab -->
                 <section id="dashboard" class="tab-pane active">
                     <div class="kpi-grid">
+                        <!-- Row 1: Checkouts -->
+                        <div class="kpi-card primary">
+                            <div class="kpi-data">
+                                <h4>Total Check Out</h4>
+                                <span id="stat-loans">--</span>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-book-reader"></i></div>
+                        </div>
+                        <div class="kpi-card info">
+                            <div class="kpi-data">
+                                <h4>Check Out - Last 30 days</h4>
+                                <span id="stat-checkout-30d">--</span>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-calendar-alt"></i></div>
+                        </div>
+                        <div class="kpi-card info">
+                            <div class="kpi-data">
+                                <h4>Check Out - Last 7 days</h4>
+                                <span id="stat-checkout-7d">--</span>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-calendar-week"></i></div>
+                        </div>
+                        <div class="kpi-card info">
+                            <div class="kpi-data">
+                                <h4>Check out - Today</h4>
+                                <span id="stat-checkout-today">--</span>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-calendar-day"></i></div>
+                        </div>
+
+                        <!-- Row 2: Returns & Session Events -->
+                        <div class="kpi-card success">
+                            <div class="kpi-data">
+                                <h4>Total returns - Last 30 days</h4>
+                                <span id="stat-returns-30d">--</span>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-undo-alt"></i></div>
+                        </div>
+                        <div class="kpi-card success">
+                            <div class="kpi-data">
+                                <h4>Total returns - Last 7 days</h4>
+                                <span id="stat-returns-7d">--</span>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-reply"></i></div>
+                        </div>
+                        <div class="kpi-card success">
+                            <div class="kpi-data">
+                                <h4>Total returns - Today</h4>
+                                <span id="stat-returns-today">--</span>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+                        </div>
+                        <div class="kpi-card purple">
+                            <div class="kpi-data">
+                                <h4>Session events</h4>
+                                <span id="total-events">0</span>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-stream"></i></div>
+                        </div>
+
+                        <!-- Row 3: Due Dates, Alerts & Sync -->
+                        <div class="kpi-card danger">
+                            <div class="kpi-data">
+                                <h4>Total past due date</h4>
+                                <span id="stat-past-due">--</span>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+                        </div>
+                        <div class="kpi-card warning">
+                            <div class="kpi-data">
+                                <h4>Total due - Today</h4>
+                                <span id="stat-due-today">--</span>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-hourglass-half"></i></div>
+                        </div>
                         <div class="kpi-card danger">
                             <div class="kpi-data">
                                 <h4>Unacknowledged Alerts</h4>
@@ -66,26 +196,12 @@
                             </div>
                             <div class="kpi-icon"><i class="fas fa-bell"></i></div>
                         </div>
-                        <div class="kpi-card success">
+                        <div class="kpi-card cyan">
                             <div class="kpi-data">
-                                <h4>TOTAL CHECK OUT</h4>
-                                <span id="stat-loans">--</span>
-                            </div>
-                            <div class="kpi-icon"><i class="fas fa-book-reader"></i></div>
-                        </div>
-                        <div class="kpi-card">
-                            <div class="kpi-data">
-                                <h4>Sync Frequency</h4>
+                                <h4>Sync Freq</h4>
                                 <span id="stat-events">0/min</span>
                             </div>
                             <div class="kpi-icon"><i class="fas fa-sync"></i></div>
-                        </div>
-                        <div class="kpi-card">
-                            <div class="kpi-data">
-                                <h4>Session Events</h4>
-                                <span id="total-events">0</span>
-                            </div>
-                            <div class="kpi-icon"><i class="fas fa-stream"></i></div>
                         </div>
                     </div>
 
@@ -135,17 +251,10 @@
                             </div>
                         </div>
                     </div>
-
-                    <div class="data-panel stream-panel">
-                        <div class="panel-title" style="background: #15181f; color: #888;">REAL-TIME CDC LOG ENGINE</div>
-                        <div class="stream-body" id="event-stream">
-                            <div class="log-line"><span class="log-time"></span><span class="log-tag">SYSTEM</span><span class="log-msg">Middleware kernel ready.</span></div>
-                        </div>
-                    </div>
                 </section>
 
-                <!-- Live Tables Tab -->
-                <section id="live-tables" class="tab-pane">
+                <!-- Live Tables Tab (Technical Only) -->
+                <section id="live-tables" class="tab-pane technical-only" data-role="technical">
                     <div class="data-panel">
                         <div class="table-header-controls">
                             <div style="display:flex; flex-direction:column; gap:5px;">
@@ -204,8 +313,8 @@
                         </div>
                     </div>
                 </section>
-                <!-- IoT Node Map & Deployment Tab -->
-                <section id="iot-maps" class="tab-pane">
+                <!-- IoT Node Map & Deployment Tab (Technical Only) -->
+                <section id="iot-maps" class="tab-pane technical-only" data-role="technical">
                     <div style="display: flex; gap: 1.5rem; flex: 1; min-height: 0; min-width: 0;">
                         <!-- Left: Blender-like Node Canvas -->
                         <div class="data-panel" style="flex: 2; position: relative;">
@@ -274,8 +383,64 @@
                         </div>
                     </div>
                 </section>
-                <section id="alerts" class="tab-pane"><div class="data-panel"><div class="panel-title">System Alerts</div><div id="alerts-content" style="padding:2rem; color:#666;">No unacknowledged alerts found.</div></div></section>
-                                <section id="audit" class="tab-pane">
+
+                <!-- Alerts & CDC Engine Tab -->
+                <section id="alerts" class="tab-pane">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; flex: 1; min-height: 0;">
+                        <!-- Top: System Alerts Overview -->
+                        <div class="data-panel" style="flex: 0 0 auto;">
+                            <div class="table-header-controls" style="justify-content: space-between; align-items: center;">
+                                <div>
+                                    <span style="font-size: 1.1rem; font-weight: 700; color: var(--primary);">
+                                        <i class="fas fa-exclamation-triangle" style="color: var(--error); margin-right: 10px;"></i>
+                                        SYSTEM & SECURITY ALERTS
+                                    </span>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">
+                                        Real-time anomaly detection, overdue book triggers, and unauthorized exit detection.
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span class="status-badge online" style="font-size: 0.75rem; padding: 5px 12px; border-radius: 4px;">
+                                        <i class="fas fa-shield-alt"></i> MONITORING ACTIVE
+                                    </span>
+                                    <button class="btn-enterprise" onclick="fetchStats()"><i class="fas fa-sync"></i> REFRESH</button>
+                                </div>
+                            </div>
+                            <div id="alerts-content" style="padding: 1.25rem 1.5rem; background: #fafbfc;">
+                                <div style="color: #666; font-size: 0.85rem;">No unacknowledged alerts found.</div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom: Real-Time CDC Log Engine Terminal -->
+                        <div class="data-panel stream-panel" style="flex: 1; min-height: 380px; display: flex; flex-direction: column; margin-top: 0;">
+                            <div class="panel-title" style="background: #12151b; color: #a0aec0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3340; padding: 0.75rem 1.25rem;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <i class="fas fa-terminal" style="color: var(--secondary);"></i>
+                                    <span style="font-weight: 700; letter-spacing: 0.5px; color: #fff;">REAL-TIME CDC LOG ENGINE</span>
+                                    <span style="font-size: 0.65rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 2px 8px; border-radius: 3px; font-weight: 600;">BINLOG REPLICATION</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div class="log-filter-group" style="display: flex; gap: 4px; margin-right: 8px;">
+                                        <button class="log-filter-btn active" data-filter="all" onclick="filterLogs('all')">ALL</button>
+                                        <button class="log-filter-btn" data-filter="loan" onclick="filterLogs('loan')">LOANS</button>
+                                        <button class="log-filter-btn" data-filter="return" onclick="filterLogs('return')">RETURNS</button>
+                                        <button class="log-filter-btn" data-filter="system" onclick="filterLogs('system')">SYSTEM</button>
+                                        <button class="log-filter-btn" data-filter="danger" onclick="filterLogs('danger')">ERRORS</button>
+                                    </div>
+                                    <button class="btn-enterprise" onclick="clearEventStream()" style="background: #2b303c; color: #cbd5e1; border: 1px solid #475569; padding: 4px 10px; font-size: 0.75rem; border-radius: 4px;">
+                                        <i class="fas fa-trash-alt"></i> Clear Stream
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="stream-body" id="event-stream" style="flex: 1; height: 100%;">
+                                <div class="log-line system"><span class="log-time"></span><span class="log-tag tag-system">SYSTEM</span><span class="log-msg">Middleware kernel ready. Real-time CDC pipeline initialized.</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- System Audit Log Tab (Technical Only) -->
+                <section id="audit" class="tab-pane technical-only" data-role="technical">
                     <div class="data-panel">
                         <div class="table-header-controls" style="justify-content: space-between; align-items: center;">
                             <div>
@@ -307,9 +472,401 @@
                     </div>
                 </section>
 
+                <!-- Super User: User Management Tab -->
+                <section id="user-management" class="tab-pane superuser-only" data-role="superuser">
+                    <!-- Top KPI Stat Grid -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card purple">
+                            <div class="kpi-data">
+                                <h4>Total Accounts</h4>
+                                <span id="su-stat-total-users">--</span>
+                                <div id="su-stat-role-breakdown" class="kpi-subtext">Loading roles...</div>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-users"></i></div>
+                        </div>
+                        <div class="kpi-card success">
+                            <div class="kpi-data">
+                                <h4>Live Online Users</h4>
+                                <span id="su-stat-online-users">--</span>
+                                <div class="kpi-subtext"><span class="pulse-indicator"></span> Real-time active sessions</div>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-user-check"></i></div>
+                        </div>
+                        <div class="kpi-card primary">
+                            <div class="kpi-data">
+                                <h4>System Master Uptime</h4>
+                                <span id="su-stat-sys-uptime" class="font-mono">00:00:00</span>
+                                <div id="su-stat-boot-time" class="kpi-subtext">Boot: Synchronizing...</div>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+                        </div>
+                        <div class="kpi-card info">
+                            <div class="kpi-data">
+                                <h4>Total User Logins</h4>
+                                <span id="su-stat-total-logins">--</span>
+                                <div class="kpi-subtext">All-time authenticated sessions</div>
+                            </div>
+                            <div class="kpi-icon"><i class="fas fa-sign-in-alt"></i></div>
+                        </div>
+                    </div>
+
+                    <!-- User Management Control & Data Panel -->
+                    <div class="data-panel" style="margin-top: 1.5rem;">
+                        <div class="table-header-controls" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <div style="display:flex; align-items:center; gap: 8px;">
+                                    <span style="font-size: 1.15rem; font-weight: 700; color: var(--primary);">
+                                        <i class="fas fa-users-cog" style="color: #8b5cf6; margin-right: 8px;"></i>
+                                        USER ACCOUNTS & ACCESS CONTROL
+                                    </span>
+                                    <span class="badge-role-tag super" style="font-size: 0.65rem; padding: 2px 8px;">SUPER USER CONSOLE</span>
+                                </div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                                    Manage credentials, role hierarchy, session uptimes, and real-time user presence.
+                                </div>
+                            </div>
+                            <div style="display:flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <input type="text" id="user-search-input" class="control-input" placeholder="Search user, name, email..." oninput="filterUsersTable()" style="min-width: 200px;">
+                                <select id="user-role-filter" class="control-input" onchange="filterUsersTable()" style="padding: 0.45rem 0.6rem;">
+                                    <option value="all">All Roles</option>
+                                    <option value="superuser">Super User</option>
+                                    <option value="technical">Technical Admin</option>
+                                    <option value="staff">Library Staff</option>
+                                </select>
+                                <select id="user-status-filter" class="control-input" onchange="filterUsersTable()" style="padding: 0.45rem 0.6rem;">
+                                    <option value="all">All Status</option>
+                                    <option value="active">Active</option>
+                                    <option value="disabled">Disabled</option>
+                                </select>
+                                <button class="btn-enterprise btn-super" onclick="openAddUserModal()">
+                                    <i class="fas fa-user-plus"></i> ADD NEW USER
+                                </button>
+                                <button class="btn-enterprise" onclick="fetchUsersList()" title="Refresh User List">
+                                    <i class="fas fa-sync"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-wrapper">
+                            <table id="users-table">
+                                <thead>
+                                    <tr>
+                                        <th>USER</th>
+                                        <th>FULL NAME & EMAIL</th>
+                                        <th>ROLE</th>
+                                        <th>STATUS</th>
+                                        <th>PRESENCE</th>
+                                        <th>SESSION UPTIME</th>
+                                        <th>LAST LOGIN & IP</th>
+                                        <th style="text-align: center;">ACTIONS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-tbody">
+                                    <tr class="loading"><td colspan="8" style="text-align: center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Loading user accounts database...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Super User: System & User Analytics Tab -->
+                <section id="analytics" class="tab-pane superuser-only" data-role="superuser">
+                    <!-- Subsystem Real-Time Health & Uptime Strip -->
+                    <div class="analytics-health-strip">
+                        <div class="health-strip-item">
+                            <div class="strip-icon kernel"><i class="fas fa-server"></i></div>
+                            <div class="strip-info">
+                                <div class="strip-title">KERNEL UPTIME</div>
+                                <div class="strip-value font-mono" id="strip-kernel-uptime">00:00:00</div>
+                            </div>
+                        </div>
+                        <div class="health-strip-item">
+                            <div class="strip-icon db"><i class="fas fa-database"></i></div>
+                            <div class="strip-info">
+                                <div class="strip-title">DATABASE POOL</div>
+                                <div class="strip-value" id="strip-db-status">HEALTHY</div>
+                            </div>
+                        </div>
+                        <div class="health-strip-item">
+                            <div class="strip-icon cdc"><i class="fas fa-bolt"></i></div>
+                            <div class="strip-info">
+                                <div class="strip-title">CDC REPLICATION</div>
+                                <div class="strip-value" id="strip-cdc-status">BINLOG SYNC</div>
+                            </div>
+                        </div>
+                        <div class="health-strip-item">
+                            <div class="strip-icon iot"><i class="fas fa-microchip"></i></div>
+                            <div class="strip-info">
+                                <div class="strip-title">IOT GATES</div>
+                                <div class="strip-value" id="strip-iot-nodes">-- ONLINE</div>
+                            </div>
+                        </div>
+                        <div class="health-strip-item">
+                            <div class="strip-icon ws"><i class="fas fa-wifi"></i></div>
+                            <div class="strip-info">
+                                <div class="strip-title">WEBSOCKET CLIENTS</div>
+                                <div class="strip-value" id="strip-ws-clients">-- ACTIVE</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2x2 Interactive Charts Grid -->
+                    <div class="charts-grid">
+                        <!-- Chart 1: Operations Timeline -->
+                        <div class="data-panel chart-panel">
+                            <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+                                <div><i class="fas fa-chart-area" style="color: #8b5cf6; margin-right: 6px;"></i> HOURLY ACTIVITY & LOGINS TIMELINE (24H)</div>
+                                <span class="chart-badge">LIVE 24H</span>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="chart-activity-timeline"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Chart 2: System Resources & Telemetry -->
+                        <div class="data-panel chart-panel">
+                            <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+                                <div><i class="fas fa-microchip" style="color: #0ea5e9; margin-right: 6px;"></i> SYSTEM RESOURCES & GATEWAY MONITOR</div>
+                                <span class="chart-badge info">CPU & RAM</span>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="chart-resources"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Chart 3: Role & Account Distribution -->
+                        <div class="data-panel chart-panel">
+                            <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+                                <div><i class="fas fa-chart-pie" style="color: #10b981; margin-right: 6px;"></i> USER ROLE & ACCOUNT BREAKDOWN</div>
+                                <span class="chart-badge success">RBAC HIERARCHY</span>
+                            </div>
+                            <div class="chart-body doughnut-chart-body">
+                                <canvas id="chart-roles"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Chart 4: Top Active Users -->
+                        <div class="data-panel chart-panel">
+                            <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+                                <div><i class="fas fa-trophy" style="color: #f59e0b; margin-right: 6px;"></i> TOP ACTIVE USERS BY OPERATION VOLUME</div>
+                                <span class="chart-badge warning">USAGE VOLUME</span>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="chart-top-users"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Real-Time User Activity Audit Stream -->
+                    <div class="data-panel" style="margin-top: 1.5rem;">
+                        <div class="table-header-controls" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <div style="display:flex; align-items:center; gap: 8px;">
+                                    <span style="font-size: 1.15rem; font-weight: 700; color: var(--primary);">
+                                        <i class="fas fa-clipboard-list" style="color: #8b5cf6; margin-right: 8px;"></i>
+                                        PLATFORM USER ACTIVITY AUDIT STREAM
+                                    </span>
+                                    <span class="status-badge online" style="font-size: 0.65rem; padding: 2px 8px;"><i class="fas fa-circle" style="font-size: 0.45rem;"></i> LIVE RECORDING</span>
+                                </div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                                    Real-time tamper-evident log of logins, administrative modifications, gate operations, and data queries.
+                                </div>
+                            </div>
+                            <div style="display:flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <div class="log-filter-group">
+                                    <button class="log-filter-btn active" data-cat="all" onclick="filterActivityCategory('all')">ALL</button>
+                                    <button class="log-filter-btn" data-cat="auth" onclick="filterActivityCategory('auth')">AUTH</button>
+                                    <button class="log-filter-btn" data-cat="user_mgmt" onclick="filterActivityCategory('user_mgmt')">USERS</button>
+                                    <button class="log-filter-btn" data-cat="security" onclick="filterActivityCategory('security')">SECURITY</button>
+                                    <button class="log-filter-btn" data-cat="system" onclick="filterActivityCategory('system')">SYSTEM</button>
+                                </div>
+                                <input type="text" id="activity-search-input" class="control-input" placeholder="Search activity logs..." oninput="filterActivityLogs()" style="min-width: 180px;">
+                                <button class="btn-enterprise" onclick="exportActivityLogsCSV()" title="Export CSV">
+                                    <i class="fas fa-file-export"></i> EXPORT CSV
+                                </button>
+                                <button class="btn-enterprise" onclick="fetchActivityLogs()" title="Refresh Logs">
+                                    <i class="fas fa-sync"></i>
+                                </button>
+                                <button class="btn-enterprise" onclick="clearActivityLogsPrompt()" style="background: rgba(220, 53, 69, 0.1); color: #dc3545; border-color: rgba(220, 53, 69, 0.3);" title="Clear Log History">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-wrapper">
+                            <table id="activity-table">
+                                <thead>
+                                    <tr>
+                                        <th>TIMESTAMP</th>
+                                        <th>USER</th>
+                                        <th>ROLE</th>
+                                        <th>ACTION</th>
+                                        <th>CATEGORY</th>
+                                        <th>DETAILS & DESCRIPTION</th>
+                                        <th>IP ADDRESS</th>
+                                        <th>STATUS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activity-tbody">
+                                    <tr class="loading"><td colspan="8" style="text-align: center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Fetching activity telemetry...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
             </main>
         </div>
     </div>
-    <script src="app.js?v=12"></script>
+
+    <!-- ==========================================================================
+         Super User Management Modals
+         ========================================================================== -->
+
+    <!-- Add User Modal -->
+    <div id="modal-add-user" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-user-plus" style="color: #8b5cf6;"></i>
+                    <span>Add New User Account</span>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="closeAddUserModal()">&times;</button>
+            </div>
+            <form id="form-add-user" onsubmit="submitAddUser(event)">
+                <div id="add-user-error" class="login-error" style="display: none;"></div>
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="add-username"><i class="fas fa-user"></i> Username *</label>
+                        <input type="text" id="add-username" class="login-input" placeholder="e.g. jdoe" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="add-role"><i class="fas fa-shield-alt"></i> Role Hierarchy *</label>
+                        <select id="add-role" class="login-input" required>
+                            <option value="staff">Library Staff</option>
+                            <option value="technical">Technical Administrator</option>
+                            <option value="superuser">Master Super User</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="add-name"><i class="fas fa-id-card"></i> Full Name *</label>
+                    <input type="text" id="add-name" class="login-input" placeholder="e.g. Jane Doe" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="add-email"><i class="fas fa-envelope"></i> Email Address</label>
+                    <input type="email" id="add-email" class="login-input" placeholder="e.g. jdoe@library.jpl.gov">
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="add-password"><i class="fas fa-lock"></i> Password *</label>
+                        <input type="password" id="add-password" class="login-input" placeholder="Minimum 3 characters" required autocomplete="new-password">
+                    </div>
+                    <div class="form-group">
+                        <label for="add-status"><i class="fas fa-toggle-on"></i> Account Status</label>
+                        <select id="add-status" class="login-input">
+                            <option value="active">Active (Enabled)</option>
+                            <option value="disabled">Disabled (Suspended)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-enterprise" onclick="closeAddUserModal()" style="background: #e2e8f0; color: #334155;">Cancel</button>
+                    <button type="submit" id="btn-save-add-user" class="btn-enterprise btn-super"><i class="fas fa-check"></i> Create Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="modal-edit-user" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-user-edit" style="color: #0284c7;"></i>
+                    <span>Edit User Account</span>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="closeEditUserModal()">&times;</button>
+            </div>
+            <form id="form-edit-user" onsubmit="submitEditUser(event)">
+                <div id="edit-user-error" class="login-error" style="display: none;"></div>
+                <input type="hidden" id="edit-username-hidden">
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label><i class="fas fa-user"></i> Username</label>
+                        <input type="text" id="edit-username-display" class="login-input" disabled style="background: #f1f5f9; color: #64748b;">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-role"><i class="fas fa-shield-alt"></i> Role Hierarchy</label>
+                        <select id="edit-role" class="login-input" required>
+                            <option value="staff">Library Staff</option>
+                            <option value="technical">Technical Administrator</option>
+                            <option value="superuser">Master Super User</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-name"><i class="fas fa-id-card"></i> Full Name *</label>
+                    <input type="text" id="edit-name" class="login-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-email"><i class="fas fa-envelope"></i> Email Address</label>
+                    <input type="email" id="edit-email" class="login-input">
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="edit-status"><i class="fas fa-toggle-on"></i> Account Status</label>
+                        <select id="edit-status" class="login-input">
+                            <option value="active">Active (Enabled)</option>
+                            <option value="disabled">Disabled (Suspended)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-password"><i class="fas fa-key"></i> New Password (optional)</label>
+                        <input type="password" id="edit-password" class="login-input" placeholder="Leave blank to keep unchanged">
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-enterprise" onclick="closeEditUserModal()" style="background: #e2e8f0; color: #334155;">Cancel</button>
+                    <button type="submit" id="btn-save-edit-user" class="btn-enterprise" style="background: var(--primary);"><i class="fas fa-save"></i> Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="modal-delete-user" class="modal-backdrop" style="display: none;">
+        <div class="modal-card" style="max-width: 440px;">
+            <div class="modal-header">
+                <div class="modal-title" style="color: #dc3545;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Confirm User Deletion</span>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="closeDeleteUserModal()">&times;</button>
+            </div>
+            <div style="padding: 1rem 0; color: #475569; font-size: 0.88rem;">
+                Are you sure you want to permanently delete user account <strong id="delete-user-target" style="color: #0f172a;">--</strong>?
+                <div style="margin-top: 8px; font-size: 0.78rem; color: #dc3545; background: #fee2e2; padding: 8px 12px; border-radius: 4px;">
+                    <i class="fas fa-info-circle"></i> This action cannot be undone and will revoke all access immediately.
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-enterprise" onclick="closeDeleteUserModal()" style="background: #e2e8f0; color: #334155;">Cancel</button>
+                <button type="button" id="btn-confirm-delete-user" class="btn-enterprise" style="background: #dc3545;" onclick="confirmDeleteUser()"><i class="fas fa-trash-alt"></i> Delete Account</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js?v=20"></script>
 </body>
 </html>
+

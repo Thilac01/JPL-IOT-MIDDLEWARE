@@ -30,10 +30,13 @@ class SSHTunnelManager:
         self.status = "CONNECTING"
         logger.info(f"Establishing SSH Tunnel to {settings.SSH_HOST}:{settings.SSH_PORT}...")
 
+        orig_replica_host = settings.REPLICA_HOST or '127.0.0.1'
+        orig_replica_port = settings.REPLICA_PORT or 3306
+
         def _open_tunnel() -> SSHTunnelForwarder:
             kwargs = {
                 "ssh_username": settings.SSH_USER,
-                "remote_bind_address": ('127.0.0.1', 3306),
+                "remote_bind_address": (orig_replica_host, orig_replica_port),
                 "local_bind_address": ('127.0.0.1', 0),
                 "set_keepalive": float(settings.SSH_KEEPALIVE)
             }
@@ -59,7 +62,7 @@ class SSHTunnelManager:
             settings.REPLICA_PORT = self.local_bind_port
             self.status = "HEALTHY"
             self.last_error = None
-            logger.info(f"SSH Tunnel active -> 127.0.0.1:{self.local_bind_port} (forwarded to remote 3306)")
+            logger.info(f"SSH Tunnel active -> 127.0.0.1:{self.local_bind_port} (forwarded to {orig_replica_host}:{orig_replica_port})")
             return True
         except Exception as e:
             self.status = "FAILED"

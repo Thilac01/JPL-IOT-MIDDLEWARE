@@ -14,6 +14,8 @@ from app.routers.health import router as health_router
 from app.routers.circulation import router as circulation_router
 from app.routers.tables import router as tables_router
 from app.routers.iot import router as iot_router
+from app.routers.auth import router as auth_router
+from app.routers.superuser import router as superuser_router
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.middleware.security import SecurityHeadersMiddleware
 from app.middleware.error_handler import register_error_handlers
@@ -102,6 +104,9 @@ app.include_router(circulation_router)
 app.include_router(tables_router)
 app.include_router(iot_router)
 app.include_router(ws_router)
+app.include_router(auth_router)
+app.include_router(superuser_router)
+
 
 # 6. Mount Static Frontend if directory exists
 if os.path.isdir("static"):

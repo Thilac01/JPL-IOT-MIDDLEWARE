@@ -17,3 +17,6 @@ logs/
 .cdc_state.json
 scratch/
 SS/
+venv/
+credential.txt
+data/

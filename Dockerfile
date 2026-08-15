@@ -1,27 +1,10 @@
-# ==============================================================================
-# Multi-Stage Production Dockerfile for JPL IoT & Security Middleware
-# ==============================================================================
+FROM python:3.11-slim-bookworm
 
-# --- Stage 1: Build & Dependencies ---
-FROM python:3.11-slim AS builder
+WORKDIR /app
 
-WORKDIR /build
-
-# Install build tools for C extensions (e.g. cryptography, paramiko)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libffi-dev \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
-
-# --- Stage 2: Production Runtime ---
-FROM python:3.11-slim AS runtime
-
-# System runtime dependencies (net-tools for arp scan, curl for healthchecks)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Force IPv4 for apt and install runtime tools
+RUN echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4 && \
+    apt-get update && apt-get install -y --no-install-recommends \
     net-tools \
     iproute2 \
     curl \
@@ -31,16 +14,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN groupadd -g 10001 appgroup && \
     useradd -u 10001 -g appgroup -s /bin/bash -m appuser
 
-WORKDIR /app
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy installed Python wheels from builder
-COPY --from=builder /root/.local /home/appuser/.local
-ENV PATH=/home/appuser/.local/bin:$PATH
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Create logs directory with correct permissions
-RUN mkdir -p /app/logs && chown -R appuser:appgroup /app
+# Create logs and data directory with correct permissions
+RUN mkdir -p /app/logs /app/data && chown -R appuser:appgroup /app
 
 # Copy application source code
 COPY --chown=appuser:appgroup . /app
