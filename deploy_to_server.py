@@ -3,6 +3,9 @@ import sys
 import posixpath
 import paramiko
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 HOST = "124.43.28.106"
 PORT = 22081
 USER = "mwdep"
@@ -60,7 +63,10 @@ def main():
         stdin, stdout, stderr = client.exec_command(rebuild_cmd, get_pty=True)
 
         for line in iter(stdout.readline, ""):
-            print(line, end="", flush=True)
+            try:
+                print(line, end="", flush=True)
+            except Exception:
+                print(line.encode("ascii", errors="replace").decode("ascii"), end="", flush=True)
         
         err = stderr.read().decode("utf-8", errors="replace")
         if err:
